@@ -635,7 +635,7 @@ def extract_triangles(mesh):
     for i, face in enumerate(mesh.loop_triangles):
         f_v = face.vertices
 
-        uf = mesh.uv_layers.active.data[i] if do_uv else None
+        uf = mesh.uv_layers.active.data if do_uv else None
 
         if do_uv:
             tri = mesh.loop_triangles
