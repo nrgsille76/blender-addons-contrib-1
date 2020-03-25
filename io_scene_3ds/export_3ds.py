@@ -651,8 +651,7 @@ def extract_triangles(mesh):
         if len(f_v) == 3:
             new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
             if (do_uv):
-                for loop in tri[i].loops:
-                    new_tri.faceuvs = v_key(t_lp[0]), v_key(t_lp[1]), v_key(t_lp[2])
+                new_tri.faceuvs = v_key(t_lp[0]), v_key(t_lp[1]), v_key(t_lp[2])
             tri_list.append(new_tri)
 
     return tri_list
