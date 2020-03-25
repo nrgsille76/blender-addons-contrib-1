@@ -19,7 +19,7 @@
 # <pep8 compliant>
 
 # Script copyright (C) Bob Holcomb
-# Contributors: Campbell Barton, Bob Holcomb, Richard Lärkäng, Damien McGinnes, Mark Stijnman
+# Contributors: Campbell Barton, Bob Holcomb, Richard Lärkäng, Damien McGinnes, Mark Stijnman, Sebastian Sille
 
 """
 Exporting is based on 3ds loader from www.gametutorials.com(Thanks DigiBen) and using information
@@ -617,19 +617,20 @@ class tri_wrapper(object):
 
     Used when converting faces to triangles"""
 
-    __slots__ = "vertex_index", "mat", "image", "faceuvs", "offset"
+    __slots__ = "vertex_index", "ma", "image", "faceuvs", "offset"
 
-    def __init__(self, vindex=(0, 0, 0), mat=None, image=None, faceuvs=None):
+    def __init__(self, vindex=(0, 0, 0), ma=None, image=None, faceuvs=None):
         self.vertex_index = vindex
-        self.mat = mat
+        self.ma = ma
         self.image = image
         self.faceuvs = faceuvs
         self.offset = [0, 0, 0]  # offset indices
 
 
 def extract_triangles(mesh):
-    """Extract triangles from a mesh.
-    If the mesh contains quads, they will be split into triangles."""
+    """Extract triangles from a mesh."""
+    
+    mesh.calc_loop_triangles()
     
     tri_list = []
     do_uv = bool(mesh.uv_layers)
@@ -641,29 +642,22 @@ def extract_triangles(mesh):
         uf = mesh.uv_layers.active.data[i] if do_uv else None
 
         if do_uv:
-            f_uv = uf.uv
+            tri = mesh.loop_triangles
+            t_lp = tri.loops
             # image is no longer property of meshUV
             #img = uf.image if uf else None
             #if img is not None:
                 #img = img.name
+                
+        def v_key(loop):
+            return (uf[loop].uv[:])
 
-        # if f_v[3] == 0:
         if len(f_v) == 3:
             new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
             if (do_uv):
-                new_tri.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[1]), uv_key(f_uv[2])
+                for loop in tri[i].loops:
+                    new_tri.faceuvs = v_key(t_lp[0]), v_key(t_lp[1]), v_key(t_lp[2])
             tri_list.append(new_tri)
-
-        else:  # it's a quad
-            new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
-            new_tri_2 = tri_wrapper((f_v[0], f_v[2], f_v[3]), face.material_index, img)
-
-            if (do_uv):
-                new_tri.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[1]), uv_key(f_uv[2])
-                new_tri_2.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[2]), uv_key(f_uv[3])
-
-            tri_list.append(new_tri)
-            tri_list.append(new_tri_2)
 
     return tri_list
 
