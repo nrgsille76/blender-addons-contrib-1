@@ -30,7 +30,7 @@ import bpy
 import math
 import struct
 import mathutils
-import bmesh
+import bpy_extras
 
 ######################################################
 # Data Structures
@@ -442,12 +442,21 @@ class _3ds_chunk(object):
 # EXPORT
 ######################################################
 
-def get_material_image_texslots(material):
-    # blender utility func.
+def get_image(ma):
+    from bpy_extras import node_shader_utils
+    """ Get image from material wrapper."""
+    if ma.use_nodes:
+        ma_wrap = node_shader_utils.PrincipledBSDFWrapper(ma)
+        ma_tex = ma_wrap.base_color_texture
+        if ma_tex and ma_tex.image:
+            return ma_tex.image
+        
+def get_material_images(material):
+    """ Get images from paint slots."""
     if material:
-        return [s for s in material.texture_paint_slots if s and s.texture.type == 'IMAGE' and s.texture.image]
+        images = material.texture_paint_images
 
-    return []
+    return images
 
 def make_material_subchunk(chunk_id, color):
     """Make a material subchunk.
@@ -471,10 +480,10 @@ def make_percent_subchunk(id, percent):
     pct_sub.add_subchunk(pct1)
     return pct_sub
 
-def make_material_texture_chunk(chunk_id, texslots, tess_uv_image=None):
+def make_material_texture_chunk(chunk_id, texslots):
     """Make Material Map texture chunk given a seq. of `MaterialTextureSlot`'s
 
-        `tess_uv_image` is optionally used as image source if the slots are
+        Nodes optionally used as image source if the slots are
         empty. No additional filtering for mapping modes is done, all
         slots are written "as is".
     """
@@ -527,7 +536,7 @@ def make_material_texture_chunk(chunk_id, texslots, tess_uv_image=None):
     for slot in texslots:
         add_texslot(slot)
         has_entry = True
-
+    '''
     # image from tess. UV face - basically the code above should handle
     # this already. No idea why its here so keep it :-)
     if tess_uv_image and not has_entry:
@@ -539,7 +548,7 @@ def make_material_texture_chunk(chunk_id, texslots, tess_uv_image=None):
         mat_sub.add_subchunk(mat_sub_file)
 
     return mat_sub if has_entry else None
-
+    '''
 
 def make_material_chunk(material, image):
     """Make a material chunk out of a blender material."""
@@ -566,12 +575,12 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, material.line_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
-        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, material.specular_intensity))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, material.roughness))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-material.diffuse_color[3]))
         
         slots = get_material_image_texslots(material)  # can be None
-
+        '''
         if slots:
 
             spec = [s for s in slots if s.use_map_specular or s.use_map_color_spec]
@@ -604,7 +613,7 @@ def make_material_chunk(material, image):
                 matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, diffuse, image)
                 if matmap:
                     material_chunk.add_subchunk(matmap)
-
+            '''
     return material_chunk
 
 
@@ -638,12 +647,11 @@ def extract_triangles(mesh):
         uf = mesh.uv_layers.active.data if do_uv else None
 
         if do_uv:
-            tri = mesh.loop_triangles
-            t_lp = tri.loops
-            # image is no longer property of meshUV
-            #img = uf.image if uf else None
-            #if img is not None:
-                #img = img.name
+            t_lp = mesh.loop_triangles.loops
+            for ma in mesh.materials:
+            img = get_image(ma) if uf else None
+            if img is not None:
+                img = img.name
                 
         def v_key(loop):
             return (uf[loop].uv[:])
@@ -1063,11 +1071,11 @@ def save(operator,
                             ma_name = None if ma is None else ma.name
                         # else there already set to none
                         
-                        # image is no longer property of meshUV
-                        #img = uf.image
-                        #img_name = None if img is None else img.name
+                        for ma in data.materials:
+                        img = get_image(ma)
+                        img_name = None if img is None else img.name
 
-                        materialDict.setdefault((ma_name, None), (ma, None))
+                        materialDict.setdefault((ma_name, img_name), (ma, img))
 
                 else:
                     for ma in ma_ls:
