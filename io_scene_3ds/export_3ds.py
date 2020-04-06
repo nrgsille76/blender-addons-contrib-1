@@ -47,8 +47,9 @@ OBJECT = 16384  # 0x4000 // This stores the faces, vertices, etc...
 MATNAME = 0xA000  # This holds the material name
 MATAMBIENT = 0xA010  # Ambient color of the object/material
 MATDIFFUSE = 0xA020  # This holds the color of the object/material
-MATSPECULAR = 0xA030  # SPecular color of the object/material
-MATSHINESS = 0xA040  # ??
+MATSPECULAR = 0xA030  # Specular color of the object/material
+MATSHINESS = 0xA040  # Shininess of the object/material (percent)
+MATSHIN2 = 0xA041  # Reflection of the object/material (percent)
 
 MAT_DIFFUSEMAP = 0xA200  # This is a header for a new diffuse texture
 MAT_OPACMAP = 0xA210  # head for opacity map
@@ -64,6 +65,10 @@ MAT_MAP_VSCALE = 0xA356   # V axis scaling
 MAT_MAP_UOFFSET = 0xA358  # U axis offset
 MAT_MAP_VOFFSET = 0xA35A  # V axis offset
 MAT_MAP_ANG = 0xA35C      # UV rotation around the z-axis in rad
+
+MATTRANS = 0xA050     # Transparency value (i.e. =100-OpacityValue) (percent)
+PCT = 0x0030          # Percent chunk
+MASTERSCALE = 0x0100  # Master scale factor
 
 RGB1 = 0x0011
 RGB2 = 0x0012
@@ -436,24 +441,21 @@ class _3ds_chunk(object):
 # EXPORT
 ######################################################
 
-def get_material_image_texslots(material):
-    # blender utility func.
+def get_image(ma):
+    from bpy_extras import node_shader_utils
+    """ Get image from material wrapper."""
+    if ma.use_nodes:
+        ma_wrap = node_shader_utils.PrincipledBSDFWrapper(ma)
+        ma_tex = ma_wrap.base_color_texture
+        if ma_tex and ma_tex.image:
+            return ma_tex.image
+        
+def get_material_images(material):
+    """ Get images from paint slots."""
     if material:
-        return [s for s in material.texture_slots if s and s.texture.type == 'IMAGE' and s.texture.image]
+        images = material.texture_paint_images
 
-    return []
-
-    """
-    images = []
-    if material:
-        for mtex in material.getTextures():
-            if mtex and mtex.tex.type == Blender.Texture.Types.IMAGE:
-                image = mtex.tex.image
-                if image:
-                    images.append(image) # maye want to include info like diffuse, spec here.
     return images
-    """
-
 
 def make_material_subchunk(chunk_id, color):
     """Make a material subchunk.
@@ -469,6 +471,13 @@ def make_material_subchunk(chunk_id, color):
     #mat_sub.add_subchunk(col2)
     return mat_sub
 
+def make_percent_subchunk(id, percent):
+    """Make a percentage based subchunk."""
+    pct_sub = _3ds_chunk(id)
+    pct1 = _3ds_chunk(PCT)
+    pct1.add_variable("percent", _3ds_ushort(int(round(percent * 100,0))))
+    pct_sub.add_subchunk(pct1)
+    return pct_sub
 
 def make_material_texture_chunk(chunk_id, texslots, tess_uv_image=None):
     """Make Material Map texture chunk given a seq. of `MaterialTextureSlot`'s
@@ -559,14 +568,18 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, (0.0, 0.0, 0.0)))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, (0.8, 0.8, 0.8)))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, (1.0, 1.0, 1.0)))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, .2))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, 1))
 
     else:
-        material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, (material.ambient * material.diffuse_color)[:]))
-        material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:]))
+        material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, material.line_color[:3]))
+        material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, material.specular_intensity))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.metallic))
 
         slots = get_material_image_texslots(material)  # can be None
-
+        '''
         if slots:
 
             spec = [s for s in slots if s.use_map_specular or s.use_map_color_spec]
@@ -599,7 +612,7 @@ def make_material_chunk(material, image):
                 matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, diffuse, image)
                 if matmap:
                     material_chunk.add_subchunk(matmap)
-
+            '''
     return material_chunk
 
 
@@ -619,41 +632,31 @@ class tri_wrapper(object):
 
 
 def extract_triangles(mesh):
-    """Extract triangles from a mesh.
+    """Extract triangles from a mesh."""
 
-    If the mesh contains quads, they will be split into triangles."""
+    mesh.calc_loop_triangles()
+    
     tri_list = []
-    do_uv = bool(mesh.tessface_uv_textures)
+    do_uv = bool(mesh.uv_layers)
 
     img = None
-    for i, face in enumerate(mesh.tessfaces):
+    for i, face in enumerate(mesh.loop_triangles):
         f_v = face.vertices
 
-        uf = mesh.tessface_uv_textures.active.data[i] if do_uv else None
+        uf = mesh.tessface_uv_textures.active.data if do_uv else None
 
         if do_uv:
-            f_uv = uf.uv
-            img = uf.image if uf else None
-            if img is not None:
-                img = img.name
+            f_uv = [uf[lp].uv for lp in face.loops]
+            for ma in mesh.materials:
+                img = get_image(ma) if uf else None
+                if img is not None:
+                    img = img.name
 
-        # if f_v[3] == 0:
         if len(f_v) == 3:
             new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
             if (do_uv):
                 new_tri.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[1]), uv_key(f_uv[2])
             tri_list.append(new_tri)
-
-        else:  # it's a quad
-            new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
-            new_tri_2 = tri_wrapper((f_v[0], f_v[2], f_v[3]), face.material_index, img)
-
-            if (do_uv):
-                new_tri.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[1]), uv_key(f_uv[2])
-                new_tri_2.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[2]), uv_key(f_uv[3])
-
-            tri_list.append(new_tri)
-            tri_list.append(new_tri_2)
 
     return tri_list
 
@@ -823,7 +826,7 @@ def make_mesh_chunk(mesh, matrix, materialDict):
     # Extract the triangles from the mesh:
     tri_list = extract_triangles(mesh)
 
-    if mesh.tessface_uv_textures:
+    if mesh.uv_layers:
         # Remove the face UVs and convert it to vertex UV:
         vert_array, uv_array, tri_list = remove_face_uv(mesh.vertices, tri_list)
     else:
@@ -1021,12 +1024,13 @@ def save(operator,
     mesh_objects = []
 
     scene = context.scene
-    depsgraph = context.evaluated_depsgraph_get()
+    layer = context.view_layer
+    #depsgraph = context.evaluated_depsgraph_get()
 
     if use_selection:
-        objects = (ob for ob in scene.objects if ob.is_visible(scene) and ob.select)
+        objects = (ob for ob in scene.objects if not ob.hide_viewport and ob.select_get(view_layer=layer))
     else:
-        objects = (ob for ob in scene.objects if ob.is_visible(scene))
+        objects = (ob for ob in scene.objects if not ob.hide_viewport)
 
     for ob in objects:
         # get derived objects
@@ -1039,34 +1043,34 @@ def save(operator,
             if ob.type not in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
                 continue
 
-            ob_derived_eval = ob_derived.evaluated_get(depsgraph)
+            #ob_derived_eval = ob_derived.evaluated_get(depsgraph)
             try:
                 data = ob_derived_eval.to_mesh()
             except:
                 data = None
 
             if data:
-                matrix = global_matrix * mat
+                matrix = global_matrix @ mat
                 data.transform(matrix)
                 mesh_objects.append((ob_derived, data, matrix))
                 mat_ls = data.materials
                 mat_ls_len = len(mat_ls)
 
                 # get material/image tuples.
-                if data.tessface_uv_textures:
+                if data.uv_layers:
                     if not mat_ls:
                         mat = mat_name = None
 
-                    for f, uf in zip(data.tessfaces, data.tessface_uv_textures.active.data):
+                    for f, uf in zip(data.polygons, data.uv_layers.active.data):
                         if mat_ls:
                             mat_index = f.material_index
                             if mat_index >= mat_ls_len:
-                                mat_index = f.mat = 0
+                                mat_index = f.material_index = 0
                             mat = mat_ls[mat_index]
                             mat_name = None if mat is None else mat.name
                         # else there already set to none
 
-                        img = uf.image
+                        img = get_image(ma)
                         img_name = None if img is None else img.name
 
                         materialDict.setdefault((mat_name, img_name), (mat, img))
@@ -1077,11 +1081,11 @@ def save(operator,
                             materialDict.setdefault((mat.name, None), (mat, None))
 
                     # Why 0 Why!
-                    for f in data.tessfaces:
+                    for f in data.polygons:
                         if f.material_index >= mat_ls_len:
                             f.material_index = 0
 
-                ob_derived_eval.to_mesh_clear()
+                #ob_derived_eval.to_mesh_clear()
 
         if free:
             free_derived_objects(ob)
@@ -1124,8 +1128,8 @@ def save(operator,
         kfdata.add_subchunk(make_kf_obj_node(ob, name_to_id))
         '''
 
-        if not blender_mesh.users:
-            bpy.data.meshes.remove(blender_mesh)
+        #if not blender_mesh.users:
+            #bpy.data.meshes.remove(blender_mesh)
         #blender_mesh.vertices = None
 
         i += i
