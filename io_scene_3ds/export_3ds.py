@@ -139,6 +139,8 @@ SZ_SHORT = 2
 SZ_INT = 4
 SZ_FLOAT = 4
 
+def uv_key(uv):
+    return round(uv[0], 6), round(uv[1], 6)
 
 class _3ds_ushort(object):
     """Class representing a short (2-byte integer) for a 3ds file.
@@ -647,19 +649,16 @@ def extract_triangles(mesh):
         uf = mesh.uv_layers.active.data if do_uv else None
 
         if do_uv:
-            t_lp = mesh.loop_triangles.loops
+            f_uv = [uf[lp].uv for lp in face.loops]
             for ma in mesh.materials:
             img = get_image(ma) if uf else None
             if img is not None:
                 img = img.name
-                
-        def v_key(loop):
-            return (uf[loop].uv[:])
 
         if len(f_v) == 3:
             new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
             if (do_uv):
-                new_tri.faceuvs = v_key(t_lp[0]), v_key(t_lp[1]), v_key(t_lp[2])
+                new_tri.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[1]), uv_key(f_uv[2])
             tri_list.append(new_tri)
 
     return tri_list
@@ -1071,7 +1070,6 @@ def save(operator,
                             ma_name = None if ma is None else ma.name
                         # else there already set to none
                         
-                        for ma in data.materials:
                         img = get_image(ma)
                         img_name = None if img is None else img.name
 
