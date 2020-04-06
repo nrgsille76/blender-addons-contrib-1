@@ -134,13 +134,14 @@ def sane_name(name):
     name_mapping[name] = new_name = new_name.encode("ASCII", "replace")
     return new_name
 
+def uv_key(uv):
+    return round(uv[0], 6), round(uv[1], 6)
+
 # size defines:
 SZ_SHORT = 2
 SZ_INT = 4
 SZ_FLOAT = 4
 
-def uv_key(uv):
-    return round(uv[0], 6), round(uv[1], 6)
 
 class _3ds_ushort(object):
     """Class representing a short (2-byte integer) for a 3ds file.
