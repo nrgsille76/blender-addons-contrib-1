@@ -134,6 +134,7 @@ def sane_name(name):
     name_mapping[name] = new_name = new_name.encode("ASCII", "replace")
     return new_name
 
+
 def uv_key(uv):
     return round(uv[0], 6), round(uv[1], 6)
 
