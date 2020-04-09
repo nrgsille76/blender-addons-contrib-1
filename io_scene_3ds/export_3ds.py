@@ -451,11 +451,9 @@ def get_material_image(material):
     """ Get images from paint slots."""
     if material:
         pt = material.paint_active_slot
-        tex = material.texture_paint_images[pt]
-        if tex.type == 'IMAGE':
-            slot = [tex]
-    
-    return slot
+        tex = material.texture_paint_images[pt] if pt else None
+        if tex and tex.type == 'IMAGE':
+            return [tex]
 
 def get_uv_image(ma):
     """ Get image from material wrapper."""
