@@ -583,14 +583,14 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, (0.8, 0.8, 0.8)))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, (1.0, 1.0, 1.0)))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, .2))
-        material_chunk.add_subchunk(make_percent_subchunk(MATREFLECT, 1))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, 1))
         
     if material.use_nodes and wrap.node_principled_bsdf:
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.specular))
-        material_chunk.add_subchunk(make_percent_subchunk(MATREFLECT, wrap.metallic))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
         diffuse = []
