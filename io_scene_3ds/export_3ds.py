@@ -31,6 +31,7 @@ import math
 import struct
 import mathutils
 import bpy_extras
+from bpy_extras import node_shader_utils
 
 ######################################################
 # Data Structures
@@ -446,21 +447,25 @@ class _3ds_chunk(object):
 # EXPORT
 ######################################################
 
-def get_image(ma):
-    from bpy_extras import node_shader_utils
+def get_material_image(material):
+    """ Get images from paint slots."""
+    if material:
+        pt = material.paint_active_slot
+        tex = material.texture_paint_images[pt]
+        if tex.type == 'IMAGE':
+            slot = [tex]
+    
+    return slot
+
+def get_uv_image(ma):
     """ Get image from material wrapper."""
     if ma.use_nodes:
         ma_wrap = node_shader_utils.PrincipledBSDFWrapper(ma)
         ma_tex = ma_wrap.base_color_texture
         if ma_tex and ma_tex.image:
             return ma_tex.image
-        
-def get_material_images(material):
-    """ Get images from paint slots."""
-    if material:
-        images = material.texture_paint_images
-
-    return images
+    else:
+        get_material_image(ma)
 
 def make_material_subchunk(chunk_id, color):
     """Make a material subchunk.
@@ -484,10 +489,28 @@ def make_percent_subchunk(id, percent):
     pct_sub.add_subchunk(pct1)
     return pct_sub
 
+def make_texture_chunk(chunk_id, images):
+    """Make Material Map texture chunk."""
+    # Add texture percentage value (100 = 1.0)
+    ma_sub = make_percent_subchunk(chunk_id, 1)
+    has_entry = False
+
+    def add_image(img):
+        filename = bpy.path.basename(image.filepath)
+        ma_sub_file = _3ds_chunk(MATMAPFILE)
+        ma_sub_file.add_variable("mapfile", _3ds_string(sane_name(filename)))
+        ma_sub.add_subchunk(ma_sub_file)
+        
+    for image in images:
+        add_image(image)
+        has_entry = True
+        
+    return ma_sub if has_entry else None
+
 def make_material_texture_chunk(chunk_id, texslots):
     """Make Material Map texture chunk given a seq. of `MaterialTextureSlot`'s
 
-        Nodes optionally used as image source if the slots are
+        Nodes are optionally used as image source if the slots are
         empty. No additional filtering for mapping modes is done, all
         slots are written "as is".
     """
@@ -496,8 +519,7 @@ def make_material_texture_chunk(chunk_id, texslots):
     has_entry = False
 
     def add_texslot(texslot):
-        texture = texslot.texture
-        image = texture.image
+        image = texslot.image
 
         filename = bpy.path.basename(image.filepath)
         mat_sub_file = _3ds_chunk(MATMAPFILE)
@@ -505,27 +527,26 @@ def make_material_texture_chunk(chunk_id, texslots):
         mat_sub.add_subchunk(mat_sub_file)
 
         maptile = 0
-
+        
         # no perfect mapping for mirror modes - 3DS only has uniform mirror w. repeat=2
-        if texture.extension == 'REPEAT' and (texture.use_mirror_x and texture.repeat_x > 1) \
-           or (texture.use_mirror_y and texture.repeat_y > 1):
+        if texslot.extension == 'REPEAT':
             maptile |= 0x2
         # CLIP maps to 3DS' decal flag
-        elif texture.extension == 'CLIP':
+        elif texslot.extension == 'CLIP':
             maptile |= 0x10
 
         mat_sub_tile = _3ds_chunk(MAT_MAP_TILING)
         mat_sub_tile.add_variable("maptiling", _3ds_ushort(maptile))
         mat_sub.add_subchunk(mat_sub_tile)
-
+        
         mat_sub_uscale = _3ds_chunk(MAT_MAP_USCALE)
         mat_sub_uscale.add_variable("mapuscale", _3ds_float(texslot.scale[0]))
         mat_sub.add_subchunk(mat_sub_uscale)
 
         mat_sub_vscale = _3ds_chunk(MAT_MAP_VSCALE)
-        mat_sub_vscale.add_variable("mapuscale", _3ds_float(texslot.scale[1]))
+        mat_sub_vscale.add_variable("mapvscale", _3ds_float(texslot.scale[1]))
         mat_sub.add_subchunk(mat_sub_vscale)
-
+        '''
         mat_sub_uoffset = _3ds_chunk(MAT_MAP_UOFFSET)
         mat_sub_uoffset.add_variable("mapuoffset", _3ds_float(texslot.offset[0]))
         mat_sub.add_subchunk(mat_sub_uoffset)
@@ -533,29 +554,19 @@ def make_material_texture_chunk(chunk_id, texslots):
         mat_sub_voffset = _3ds_chunk(MAT_MAP_VOFFSET)
         mat_sub_voffset.add_variable("mapvoffset", _3ds_float(texslot.offset[1]))
         mat_sub.add_subchunk(mat_sub_voffset)
-
+        '''             
     # store all textures for this mapto in order. This at least is what
     # the 3DS exporter did so far, afaik most readers will just skip
     # over 2nd textures.
     for slot in texslots:
         add_texslot(slot)
         has_entry = True
-    '''
-    # image from tess. UV face - basically the code above should handle
-    # this already. No idea why its here so keep it :-)
-    if tess_uv_image and not has_entry:
-        has_entry = True
-
-        filename = bpy.path.basename(tess_uv_image.filepath)
-        mat_sub_file = _3ds_chunk(MATMAPFILE)
-        mat_sub_file.add_variable("mapfile", _3ds_string(sane_name(filename)))
-        mat_sub.add_subchunk(mat_sub_file)
 
     return mat_sub if has_entry else None
-    '''
 
 def make_material_chunk(material, image):
     """Make a material chunk out of a blender material."""
+    wrap = node_shader_utils.PrincipledBSDFWrapper(material)
     material_chunk = _3ds_chunk(MATERIAL)
     name = _3ds_chunk(MATNAME)
 
@@ -572,9 +583,48 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, (0.8, 0.8, 0.8)))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, (1.0, 1.0, 1.0)))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, .2))
-        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, 1))
-        material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 0))
+        material_chunk.add_subchunk(make_percent_subchunk(MATREFLECT, 1))
         
+    if material.use_nodes and wrap.node_principled_bsdf:
+        material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
+        material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
+        material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.specular))
+        material_chunk.add_subchunk(make_percent_subchunk(MATREFLECT, wrap.metallic))
+        material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
+        
+        diffuse = []
+        
+        if wrap.specular_texture.image:
+            spec = [wrap.specular_texture]
+            matmap = make_material_texture_chunk(MAT_SPECMAP, spec)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+            
+        if wrap.alpha_texture.image:
+            alpha = [wrap.alpha_texture]
+            matmap = make_material_texture_chunk(MAT_OPACMAP, alpha)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+
+        if wrap.normalmap_texture:
+            normal = [wrap.normalmap_texture]
+            matmap = make_material_texture_chunk(MAT_BUMPMAP, normal)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+        
+        # make sure no textures are lost. Everything that doesn't fit
+        # into a channel is exported as diffuse texture
+        diffuse = []
+        
+        if wrap.base_color_texture.image:
+            diffuse = [wrap.base_color_texture]
+                
+        if diffuse:
+            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, diffuse)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+                
     else:
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, material.line_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
@@ -583,41 +633,11 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-material.diffuse_color[3]))
         
-        slots = get_material_image_texslots(material)  # can be None
-        '''
+        slots = get_material_image(material)  # can be None
+        
         if slots:
-
-            spec = [s for s in slots if s.use_map_specular or s.use_map_color_spec]
-            matmap = make_material_texture_chunk(MAT_SPECMAP, spec)
-            if matmap:
-                material_chunk.add_subchunk(matmap)
-
-            alpha = [s for s in slots if s.use_map_alpha]
-            matmap = make_material_texture_chunk(MAT_OPACMAP, alpha)
-            if matmap:
-                material_chunk.add_subchunk(matmap)
-
-            normal = [s for s in slots if s.use_map_normal]
-            matmap = make_material_texture_chunk(MAT_BUMPMAP, normal)
-            if matmap:
-                material_chunk.add_subchunk(matmap)
-
-            # make sure no textures are lost. Everything that doesn't fit
-            # into a channel is exported as diffuse texture with a
-            # warning.
-            diffuse = []
-            for s in slots:
-                if s.use_map_color_diffuse:
-                    diffuse.append(s)
-                elif not (s in normal or s in alpha or s in spec):
-                    print('\nwarning: failed to map texture to 3DS map channel, assuming diffuse')
-                    diffuse.append(s)
-
-            if diffuse:
-                matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, diffuse, image)
-                if matmap:
-                    material_chunk.add_subchunk(matmap)
-            '''
+            material_chunk.add_subchunk(make_texture_chunk(MAT_DIFFUSEMAP, slots))
+            
     return material_chunk
 
 
@@ -653,7 +673,7 @@ def extract_triangles(mesh):
         if do_uv:
             f_uv = [uf[lp].uv for lp in face.loops]
             for ma in mesh.materials:
-            img = get_image(ma) if uf else None
+            img = get_uv_image(ma) if uf else None
             if img is not None:
                 img = img.name
 
@@ -1072,7 +1092,7 @@ def save(operator,
                             ma_name = None if ma is None else ma.name
                         # else there already set to none
                         
-                        img = get_image(ma)
+                        img = get_uv_image(ma)
                         img_name = None if img is None else img.name
 
                         materialDict.setdefault((ma_name, img_name), (ma, img))
