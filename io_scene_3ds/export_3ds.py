@@ -633,7 +633,7 @@ def make_material_chunk(material, image):
         
         slots = [get_material_image(material)]  # can be None
         
-        if slots:
+        if image:
             material_chunk.add_subchunk(make_texture_chunk(MAT_DIFFUSEMAP, slots))
             
     return material_chunk
