@@ -455,7 +455,7 @@ def get_material_image(material):
         if pt < len(tex):
             slot = tex[pt]
             if slot.type == 'IMAGE':
-                return [slot]
+                return slot
 
 def get_uv_image(ma):
     """ Get image from material wrapper."""
@@ -465,7 +465,7 @@ def get_uv_image(ma):
         if ma_tex and ma_tex.image:
             return ma_tex.image
     else:
-        get_material_image(ma)
+        return get_material_image(ma)
 
 def make_material_subchunk(chunk_id, color):
     """Make a material subchunk.
@@ -631,7 +631,7 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-material.diffuse_color[3]))
         
-        slots = get_material_image(material)  # can be None
+        slots = [get_material_image(material)]  # can be None
         
         if slots:
             material_chunk.add_subchunk(make_texture_chunk(MAT_DIFFUSEMAP, slots))
