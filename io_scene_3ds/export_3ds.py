@@ -459,7 +459,7 @@ def get_material_image(material):
 
 def get_uv_image(ma):
     """ Get image from material wrapper."""
-    if ma.use_nodes:
+    if ma and ma.use_nodes:
         ma_wrap = node_shader_utils.PrincipledBSDFWrapper(ma)
         ma_tex = ma_wrap.base_color_texture
         if ma_tex and ma_tex.image:
@@ -592,8 +592,6 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.specular))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
-        
-        diffuse = []
         
         if wrap.specular_texture.image:
             spec = [wrap.specular_texture]
