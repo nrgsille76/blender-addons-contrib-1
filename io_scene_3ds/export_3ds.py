@@ -566,7 +566,6 @@ def make_material_texture_chunk(chunk_id, texslots):
 
 def make_material_chunk(material, image):
     """Make a material chunk out of a blender material."""
-    wrap = node_shader_utils.PrincipledBSDFWrapper(material)
     material_chunk = _3ds_chunk(MATERIAL)
     name = _3ds_chunk(MATNAME)
 
@@ -585,7 +584,8 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, .2))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, 1))
         
-    if material.use_nodes and wrap.node_principled_bsdf:
+    elif material and material.use_nodes:
+        wrap = node_shader_utils.PrincipledBSDFWrapper(material)
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
