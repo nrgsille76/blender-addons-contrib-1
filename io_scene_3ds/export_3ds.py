@@ -544,15 +544,15 @@ def make_material_texture_chunk(chunk_id, texslots):
         mat_sub_vscale = _3ds_chunk(MAT_MAP_VSCALE)
         mat_sub_vscale.add_variable("mapvscale", _3ds_float(texslot.scale[1]))
         mat_sub.add_subchunk(mat_sub_vscale)
-        '''
+        
         mat_sub_uoffset = _3ds_chunk(MAT_MAP_UOFFSET)
-        mat_sub_uoffset.add_variable("mapuoffset", _3ds_float(texslot.offset[0]))
+        mat_sub_uoffset.add_variable("mapuoffset", _3ds_float(texslot.translation[0]))
         mat_sub.add_subchunk(mat_sub_uoffset)
 
         mat_sub_voffset = _3ds_chunk(MAT_MAP_VOFFSET)
-        mat_sub_voffset.add_variable("mapvoffset", _3ds_float(texslot.offset[1]))
+        mat_sub_voffset.add_variable("mapvoffset", _3ds_float(texslot.translation[1]))
         mat_sub.add_subchunk(mat_sub_voffset)
-        '''             
+                     
     # store all textures for this mapto in order. This at least is what
     # the 3DS exporter did so far, afaik most readers will just skip
     # over 2nd textures.
