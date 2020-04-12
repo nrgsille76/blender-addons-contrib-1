@@ -57,11 +57,14 @@ MATDIFFUSE = 0xA020  # This holds the color of the object/material
 MATSPECULAR = 0xA030  # Specular color of the object/material
 MATSHINESS = 0xA040  # Specular intensity of the object/material (percent)
 MATSHIN2 = 0xA041  # Reflection of the object/material (percent)
+MATSHIN3 = 0xA042  # metallic/mirror of the object/material (percent)
 
 MAT_DIFFUSEMAP = 0xA200  # This is a header for a new diffuse texture
+MAT_SPECMAP = 0xA204  # head for specularity map
 MAT_OPACMAP = 0xA210  # head for opacity map
-MAT_BUMPMAP = 0xA230  # read for normal map
-MAT_SPECMAP = 0xA204  # read for specularity map
+MAT_REFLMAP	= 0xA220  # head for reflect map
+MAT_BUMPMAP = 0xA230  # head for normal map
+MAT_SHINMAP = 0xA33C  # head for roughness map
 
 #>------ sub defines of MAT_MAP
 MATMAPFILE = 0xA300  # This holds the file name of a texture
@@ -589,8 +592,9 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
-        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.specular))
-        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.metallic))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.roughness))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.specular))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
         if wrap.specular_texture.image:
@@ -604,10 +608,22 @@ def make_material_chunk(material, image):
             matmap = make_material_texture_chunk(MAT_OPACMAP, alpha)
             if matmap:
                 material_chunk.add_subchunk(matmap)
+                
+        if wrap.metallic_texture.image:
+            metallic = [wrap.metallic_texture]
+            matmap = make_material_texture_chunk(MAT_REFLMAP, metallic)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
 
         if wrap.normalmap_texture:
             normal = [wrap.normalmap_texture]
             matmap = make_material_texture_chunk(MAT_BUMPMAP, normal)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+                
+        if wrap.roughness_texture.image:
+            roughness = [wrap.roughness_texture]
+            matmap = make_material_texture_chunk(MAT_SHINMAP, roughness)
             if matmap:
                 material_chunk.add_subchunk(matmap)
         
@@ -628,7 +644,8 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, material.roughness))
-        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.metallic))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.specular_intensity))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, material.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-material.diffuse_color[3]))
         
         slots = [get_material_image(material)]  # can be None
