@@ -62,7 +62,7 @@ MATSHIN3 = 0xA042  # metallic/mirror of the object/material (percent)
 MAT_DIFFUSEMAP = 0xA200  # This is a header for a new diffuse texture
 MAT_SPECMAP = 0xA204  # head for specularity map
 MAT_OPACMAP = 0xA210  # head for opacity map
-MAT_REFLMAP	= 0xA220  # head for reflect map
+MAT_REFLMAP = 0xA220  # head for reflect map
 MAT_BUMPMAP = 0xA230  # head for normal map
 MAT_SHINMAP = 0xA33C  # head for roughness map
 
