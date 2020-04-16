@@ -71,6 +71,8 @@ MAT_SPECULAR_MAP = 0xA204  # This is a header for a new specular map
 MAT_OPACITY_MAP = 0xA210  # This is a header for a new opacity map
 MAT_REFLECTION_MAP = 0xA220  # This is a header for a new reflection map
 MAT_BUMP_MAP = 0xA230  # This is a header for a new bump map
+MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
+MAT_SHIN_MAP = 0xA33C  # This is a header for a new roughness map
 MAT_MAP_FILEPATH = 0xA300  # This holds the file name of the texture
 
 MAT_MAP_TILING = 0xa351   # 2nd bit (from LSB) is mirror UV flag
@@ -228,7 +230,7 @@ def skip_to_end(file, skip_chunk):
 def add_texture_to_material(image, scale, offset, extension, contextMaterialWrapper, mapto):
     #print('assigning %s to %s' % (texture, material))
 
-    if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'NORMAL'}:
+    if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'METALLIC', 'ROUGHNESS', 'NORMAL'}:
         print(
             "\tError: Cannot map to %r\n\tassuming diffuse color. modify material %r later." %
             (mapto, contextMaterialWrapper.material.name)
@@ -238,10 +240,13 @@ def add_texture_to_material(image, scale, offset, extension, contextMaterialWrap
     if mapto == 'COLOR':
         img_wrap = contextMaterialWrapper.base_color_texture
     elif mapto == 'SPECULARITY':
-        # TODO: Not sure if this is correct usage?
         img_wrap = contextMaterialWrapper.specular_texture
     elif mapto == 'ALPHA':
         img_wrap = contextMaterialWrapper.alpha_texture
+    elif mapto == 'METALLIC':
+        img_wrap = contextMaterialWrapper.metallic_texture
+    elif mapto == 'ROUGHNESS':
+        img_wrap = contextMaterialWrapper.roughness_texture
     elif mapto == 'NORMAL':
         img_wrap = contextMaterialWrapper.normalmap_texture
 
@@ -518,19 +523,19 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_AMBIENT:
             #print 'elif new_chunk.ID == MAT_AMBIENT:'
             read_chunk(file, temp_chunk)
-            # TODO: consider ambient term somehow. maybe add to color
-#               if temp_chunk.ID == MAT_FLOAT_COLOR:
-#               contextMaterial.mirror_color = read_float_color(temp_chunk)
+            # only available color is emission color
+               if temp_chunk.ID == MAT_FLOAT_COLOR:
+               contextMaterialWrapper.emission_color = read_float_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3f'))
 #               temp_chunk.bytes_read += 12
 #               contextMaterial.mirCol = [float(col) for col in struct.unpack('<3f', temp_data)]
-#            elif temp_chunk.ID == MAT_24BIT_COLOR:
-#                contextMaterial.mirror_color = read_byte_color(temp_chunk)
+            elif temp_chunk.ID == MAT_24BIT_COLOR:
+                contextMaterialWrapper.emission_color = read_byte_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3B'))
 #               temp_chunk.bytes_read += 3
 #               contextMaterial.mirCol = [float(col)/255 for col in struct.unpack('<3B', temp_data)] # data [0,1,2] == rgb
-#            else:
-            skip_to_end(file, temp_chunk)
+            else:
+                skip_to_end(file, temp_chunk)
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == MAT_DIFFUSE:
@@ -556,19 +561,19 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_SPECULAR:
             #print 'elif new_chunk.ID == MAT_SPECULAR:'
             read_chunk(file, temp_chunk)
-            # TODO: consider using specular term somehow
-#            if temp_chunk.ID == MAT_FLOAT_COLOR:
-#                contextMaterial.specular_color = read_float_color(temp_chunk)
+            # Specular color is available
+            if temp_chunk.ID == MAT_FLOAT_COLOR:
+                contextMaterial.specular_color = read_float_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3f'))
 #               temp_chunk.bytes_read += 12
 #               contextMaterial.mirCol = [float(col) for col in struct.unpack('<3f', temp_data)]
-#            elif temp_chunk.ID == MAT_24BIT_COLOR:
-#                contextMaterial.specular_color = read_byte_color(temp_chunk)
+            elif temp_chunk.ID == MAT_24BIT_COLOR:
+                contextMaterial.specular_color = read_byte_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3B'))
 #               temp_chunk.bytes_read += 3
 #               contextMaterial.mirCol = [float(col)/255 for col in struct.unpack('<3B', temp_data)] # data [0,1,2] == rgb
-#            else:
-            skip_to_end(file, temp_chunk)
+            else:
+                skip_to_end(file, temp_chunk)
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == MAT_TEXTURE_MAP:
@@ -579,9 +584,22 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
         elif new_chunk.ID == MAT_OPACITY_MAP:
             read_texture(new_chunk, temp_chunk, "Opacity", "ALPHA")
+            
+        elif new_chunk.ID == MAT_REFLECTION_MAP:
+            read_texture(new_chunk, temp_chunk, "Reflect", "METALLIC")
 
         elif new_chunk.ID == MAT_BUMP_MAP:
             read_texture(new_chunk, temp_chunk, "Bump", "NORMAL")
+            
+        elif new_chunk.ID == MAT_BUMP_PERCENT:
+            read_chunk(file, temp_chunk)
+            temp_data = file.read(SZ_U_SHORT)
+            temp_chunk.bytes_read += SZ_U_SHORT
+            contextMaterialWrapper.normalmap_strength = (float(struct.unpack('<H', temp_data)[0]) / 100)
+            new_chunk.bytes_read += temp_chunk.bytes_read
+            
+        elif new_chunk.ID == MAT_SHIN_MAP:
+            read_texture(new_chunk, temp_chunk, "Shininess", "ROUGHNESS")
 
         elif new_chunk.ID == MAT_TRANSPARENCY:
             #print 'elif new_chunk.ID == MAT_TRANSPARENCY:'
