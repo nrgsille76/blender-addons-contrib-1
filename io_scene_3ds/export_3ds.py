@@ -64,6 +64,7 @@ MAT_SPECMAP = 0xA204  # head for specularity map
 MAT_OPACMAP = 0xA210  # head for opacity map
 MAT_REFLMAP = 0xA220  # head for reflect map
 MAT_BUMPMAP = 0xA230  # head for normal map
+MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
 MAT_SHINMAP = 0xA33C  # head for roughness map
 
 #>------ sub defines of MAT_MAP
@@ -617,9 +618,14 @@ def make_material_chunk(material, image):
 
         if wrap.normalmap_texture:
             normal = [wrap.normalmap_texture]
-            matmap = make_material_texture_chunk(MAT_BUMPMAP, normal)
+            bump = wrap.normalmap_strength
+            bumpval = min(999, (bump * 100)) # 3ds max bump = 999
+            strength = _3ds_chunk(MAT_BUMP_PERCENT)
+            strength.add_variable("bump_pct", _3ds_ushort(int(bumpval)))
+            matmap = make_node_texture_chunk(MAT_BUMPMAP, normal)
             if matmap:
                 material_chunk.add_subchunk(matmap)
+                material_chunk.add_subchunk(strength)
                 
         if wrap.roughness_texture.image:
             roughness = [wrap.roughness_texture]
