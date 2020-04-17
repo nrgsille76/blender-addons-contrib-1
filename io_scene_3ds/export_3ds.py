@@ -622,7 +622,7 @@ def make_material_chunk(material, image):
             bumpval = min(999, (bump * 100)) # 3ds max bump = 999
             strength = _3ds_chunk(MAT_BUMP_PERCENT)
             strength.add_variable("bump_pct", _3ds_ushort(int(bumpval)))
-            matmap = make_node_texture_chunk(MAT_BUMPMAP, normal)
+            matmap = make_material_texture_chunk(MAT_BUMPMAP, normal)
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 material_chunk.add_subchunk(strength)
