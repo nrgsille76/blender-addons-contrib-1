@@ -60,9 +60,11 @@ OBJECT = 0x4000  # This stores the faces, vertices, etc...
 MAT_NAME = 0xA000  # This holds the material name
 MAT_AMBIENT = 0xA010  # Ambient color of the object/material
 MAT_DIFFUSE = 0xA020  # This holds the color of the object/material
-MAT_SPECULAR = 0xA030  # SPecular color of the object/material
-MAT_SHINESS = 0xA040  # ??
-MAT_TRANSPARENCY = 0xA050  # Transparency value of material
+MAT_SPECULAR = 0xA030  # Specular color of the object/material
+MAT_SHINESS = 0xA040  # Roughness of the object/material (percent)
+MAT_SHIN2 = 0xA041  # Shininess of the object/material (percent)
+MAT_SHIN3 = 0xA042  # Reflection of the object/material (percent)
+MAT_TRANSPARENCY = 0xA050  # Transparency value of material (percent)
 MAT_SELF_ILLUM = 0xA080  # Self Illumination value of material
 MAT_WIRE = 0xA085  # Only render's wireframe
 
@@ -592,14 +594,52 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             read_texture(new_chunk, temp_chunk, "Bump", "NORMAL")
             
         elif new_chunk.ID == MAT_BUMP_PERCENT:
-            read_chunk(file, temp_chunk)
-            temp_data = file.read(SZ_U_SHORT)
-            temp_chunk.bytes_read += SZ_U_SHORT
+            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
             contextMaterialWrapper.normalmap_strength = (float(struct.unpack('<H', temp_data)[0]) / 100)
             new_chunk.bytes_read += temp_chunk.bytes_read
             
         elif new_chunk.ID == MAT_SHIN_MAP:
             read_texture(new_chunk, temp_chunk, "Shininess", "ROUGHNESS")
+            
+        elif new_chunk.ID == MAT_SHINESS:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                contextMaterialWrapper.roughness = (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(STRUCT_SIZE_FLOAT)
+                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                contextMaterialWrapper.roughness = float(struct.unpack('f', temp_data)[0])
+                
+            new_chunk.bytes_read += temp_chunk.bytes_read
+            
+        elif new_chunk.ID == MAT_SHIN2:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                contextMaterialWrapper.specular = (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(STRUCT_SIZE_FLOAT)
+                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                contextMaterialWrapper.specular = float(struct.unpack('f', temp_data)[0])
+                
+            new_chunk.bytes_read += temp_chunk.bytes_read
+            
+        elif new_chunk.ID == MAT_SHIN3:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                contextMaterialWrapper.metallic = (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(STRUCT_SIZE_FLOAT)
+                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                contextMaterialWrapper.metallic = float(struct.unpack('f', temp_data)[0])
+                
+            new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == MAT_TRANSPARENCY:
             #print 'elif new_chunk.ID == MAT_TRANSPARENCY:'
