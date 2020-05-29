@@ -466,7 +466,7 @@ def get_uv_image(ma):
     if ma and ma.use_nodes:
         ma_wrap = node_shader_utils.PrincipledBSDFWrapper(ma)
         ma_tex = ma_wrap.base_color_texture
-        if ma_tex and ma_tex.image:
+        if ma_tex and ma_tex.image is not None:
             return ma_tex.image
     else:
         return get_material_image(ma)
@@ -532,9 +532,11 @@ def make_material_texture_chunk(chunk_id, texslots):
 
         maptile = 0
         
+        if tex.node_image.outputs['Alpha'].is_linked:
+            maptile |= 0x40
         # no perfect mapping for mirror modes - 3DS only has uniform mirror w. repeat=2
-        if texslot.extension == 'REPEAT':
-            maptile |= 0x2
+        elif texslot.extension == 'EXTEND':
+            maptile |= 0x1
         # CLIP maps to 3DS' decal flag
         elif texslot.extension == 'CLIP':
             maptile |= 0x10
@@ -563,8 +565,9 @@ def make_material_texture_chunk(chunk_id, texslots):
     # the 3DS exporter did so far, afaik most readers will just skip
     # over 2nd textures.
     for slot in texslots:
-        add_texslot(slot)
-        has_entry = True
+        if slot.image is not None:
+            add_texslot(slot)
+            has_entry = True
 
     return mat_sub if has_entry else None
 
