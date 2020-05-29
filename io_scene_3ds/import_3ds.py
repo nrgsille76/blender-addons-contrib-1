@@ -253,11 +253,12 @@ def add_texture_to_material(image, scale, offset, extension, contextMaterialWrap
         img_wrap = contextMaterialWrapper.normalmap_texture
 
     img_wrap.image = image
-
     img_wrap.scale = scale
     img_wrap.translation = offset
-
     img_wrap.extension = 'REPEAT'
+    
+    if extension == 'alpha':
+        img_wrap.owner_shader.material.node_tree.links.new(img_wrap.node_image.outputs['Alpha'], img_wrap.socket_dst)
     if extension == 'mirror':
         # 3DS mirror flag can be emulated by these settings (at least so it seems)
         # TODO: bring back mirror
@@ -265,7 +266,9 @@ def add_texture_to_material(image, scale, offset, extension, contextMaterialWrap
         # texture.repeat_x = texture.repeat_y = 2
         # texture.use_mirror_x = texture.use_mirror_y = True
     elif extension == 'decal':
-        # 3DS' decal mode maps best to Blenders CLIP
+        # 3DS' decal mode maps best to Blenders EXTEND
+        img_wrap.extension = 'EXTEND'
+    elif extension == 'noWrap':
         img_wrap.extension = 'CLIP'
 
 
@@ -435,10 +438,24 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
             elif temp_chunk.ID == MAT_MAP_TILING:
                 tiling = read_short(temp_chunk)
-                if tiling & 0x2:
-                    extension = 'mirror'
-                elif tiling & 0x10:
+                if tiling & 0x1:
                     extension = 'decal'
+                elif tiling & 0x2:
+                    extension = 'mirror'
+                elif tiling & 0x8:
+                    extension = 'invert'
+                elif tiling & 0x10:
+                    extension = 'noWrap'
+                elif tiling & 0x20:
+                    extension = 'sat'
+                elif tiling & 0x40:
+                    extension = 'alpha'
+                elif tiling & 0x80:
+                    extension = 'tint'
+                elif tiling & 0x100:
+                    extension = 'noAlpha'
+                elif tiling & 0x200:
+                    extension = 'RGBtint'
 
             elif temp_chunk.ID == MAT_MAP_ANG:
                 print("\nwarning: ignoring UV rotation")
