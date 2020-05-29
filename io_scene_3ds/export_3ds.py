@@ -529,10 +529,12 @@ def make_material_texture_chunk(chunk_id, texslots):
         mat_sub_file = _3ds_chunk(MATMAPFILE)
         mat_sub_file.add_variable("mapfile", _3ds_string(sane_name(filename)))
         mat_sub.add_subchunk(mat_sub_file)
+        for link in texslot.socket_dst.links:
+            socket = link.from_socket
 
         maptile = 0
         
-        if texslot.node_image.outputs['Alpha'].is_linked:
+        if socket.identifier == 'Alpha':
             maptile |= 0x40
         # no perfect mapping for mirror modes - 3DS only has uniform mirror w. repeat=2
         elif texslot.extension == 'EXTEND':
