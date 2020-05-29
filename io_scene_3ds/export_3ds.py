@@ -603,19 +603,19 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
-        if wrap.specular_texture.image:
+        if wrap.specular_texture:
             spec = [wrap.specular_texture]
             matmap = make_material_texture_chunk(MAT_SPECMAP, spec)
             if matmap:
                 material_chunk.add_subchunk(matmap)
             
-        if wrap.alpha_texture.image:
+        if wrap.alpha_texture:
             alpha = [wrap.alpha_texture]
             matmap = make_material_texture_chunk(MAT_OPACMAP, alpha)
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 
-        if wrap.metallic_texture.image:
+        if wrap.metallic_texture:
             metallic = [wrap.metallic_texture]
             matmap = make_material_texture_chunk(MAT_REFLMAP, metallic)
             if matmap:
@@ -632,7 +632,7 @@ def make_material_chunk(material, image):
                 material_chunk.add_subchunk(matmap)
                 material_chunk.add_subchunk(strength)
                 
-        if wrap.roughness_texture.image:
+        if wrap.roughness_texture:
             roughness = [wrap.roughness_texture]
             matmap = make_material_texture_chunk(MAT_SHINMAP, roughness)
             if matmap:
