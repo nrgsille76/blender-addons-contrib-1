@@ -535,7 +535,9 @@ def make_material_texture_chunk(chunk_id, texslots):
         maptile = 0
         
         if socket.identifier == 'Alpha':
-            maptile |= 0x40
+            maptile |= 0x40  # If alpha, diffuse and specular maps must be accompanied with a tinting bit
+            tint = 0x80 if texslot.image.colorspace_settings.name == 'Non-Color' else 0x200  # RGB tint
+            
         # no perfect mapping for mirror modes - 3DS only has uniform mirror w. repeat=2
         elif texslot.extension == 'EXTEND':
             maptile |= 0x1
@@ -545,6 +547,8 @@ def make_material_texture_chunk(chunk_id, texslots):
 
         mat_sub_tile = _3ds_chunk(MAT_MAP_TILING)
         mat_sub_tile.add_variable("maptiling", _3ds_ushort(maptile))
+        if tex.socket_dst.identifier in {'Base Color', 'Specular'} and socket.identifier == 'Alpha':
+            ma_sub_tile.add_variable("tint", _3ds_ushort(tint))
         mat_sub.add_subchunk(mat_sub_tile)
         
         mat_sub_uscale = _3ds_chunk(MAT_MAP_USCALE)
