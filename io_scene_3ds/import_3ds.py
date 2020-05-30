@@ -451,11 +451,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 elif tiling & 0x40:
                     extension = 'alpha'
                 elif tiling & 0x80:
-                    extension = 'tint'
+                    tinting = 'tint'
                 elif tiling & 0x100:
-                    extension = 'noAlpha'
+                    tinting = 'noAlpha'
                 elif tiling & 0x200:
-                    extension = 'RGBtint'
+                    tinting = 'RGBtint'
 
             elif temp_chunk.ID == MAT_MAP_ANG:
                 print("\nwarning: ignoring UV rotation")
