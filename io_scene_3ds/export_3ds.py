@@ -511,15 +511,13 @@ def make_texture_chunk(chunk_id, images):
         
     return ma_sub if has_entry else None
 
-def make_material_texture_chunk(chunk_id, texslots):
+def make_material_texture_chunk(chunk_id, texslots, pct):
     """Make Material Map texture chunk given a seq. of `MaterialTextureSlot`'s
-
-        Nodes are optionally used as image source if the slots are
-        empty. No additional filtering for mapping modes is done, all
-        slots are written "as is".
-    """
-
-    mat_sub = _3ds_chunk(chunk_id)
+        Paint slots are optionally used as image source if no nodes are
+        used. No additional filtering for mapping modes is done, all
+        slots are written "as is"."""
+    # Add texture percentage value
+    mat_sub = make_percent_subchunk(chunk_id, pct)
     has_entry = False
 
     def add_texslot(texslot):
@@ -609,36 +607,41 @@ def make_material_chunk(material, image):
         
         if wrap.specular_texture:
             spec = [wrap.specular_texture]
-            matmap = make_material_texture_chunk(MAT_SPECMAP, spec)
+            s_pct = material.specular_intensity
+            matmap = make_material_texture_chunk(MAT_SPECMAP, spec, s_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
             
         if wrap.alpha_texture:
             alpha = [wrap.alpha_texture]
-            matmap = make_material_texture_chunk(MAT_OPACMAP, alpha)
+            a_pct = material.diffuse_color[3]
+            matmap = make_material_texture_chunk(MAT_OPACMAP, alpha, a_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 
         if wrap.metallic_texture:
             metallic = [wrap.metallic_texture]
-            matmap = make_material_texture_chunk(MAT_REFLMAP, metallic)
+            m_pct = material.metallic
+            matmap = make_material_texture_chunk(MAT_REFLMAP, metallic, m_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
 
         if wrap.normalmap_texture:
             normal = [wrap.normalmap_texture]
             bump = wrap.normalmap_strength
+            b_pct = min(bump, 1)
             bumpval = min(999, (bump * 100)) # 3ds max bump = 999
             strength = _3ds_chunk(MAT_BUMP_PERCENT)
             strength.add_variable("bump_pct", _3ds_ushort(int(bumpval)))
-            matmap = make_material_texture_chunk(MAT_BUMPMAP, normal)
+            matmap = make_material_texture_chunk(MAT_BUMPMAP, normal, b_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 material_chunk.add_subchunk(strength)
                 
         if wrap.roughness_texture:
             roughness = [wrap.roughness_texture]
-            matmap = make_material_texture_chunk(MAT_SHINMAP, roughness)
+            r_pct = material.roughness
+            matmap = make_material_texture_chunk(MAT_SHINMAP, roughness, r_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
         
@@ -646,11 +649,18 @@ def make_material_chunk(material, image):
         # into a channel is exported as diffuse texture
         diffuse = []
         
-        if wrap.base_color_texture.image:
-            diffuse = [wrap.base_color_texture]
+        if wrap.base_color_texture:
+            color = [wrap.base_color_texture]
+            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, pct=1)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+                
+        for link in wrap.material.node_tree.links:
+            if link.from_node.type == 'TEX_IMAGE' and link.to_node.type != 'BSDF_PRINCIPLED':
+                diffuse = [link.from_node.image]
                 
         if diffuse:
-            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, diffuse)
+            matmap = make_uv_texture_chunk(MAT_DIFFUSEMAP, diffuse)
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 
