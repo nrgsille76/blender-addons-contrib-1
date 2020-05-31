@@ -229,7 +229,7 @@ def skip_to_end(file, skip_chunk):
     skip_chunk.bytes_read += buffer_size
 
 
-def add_texture_to_material(image, scale, offset, extension, contextMaterialWrapper, mapto):
+def add_texture_to_material(image, scale, offset, angle, extension, contextMaterialWrapper, mapto):
     #print('assigning %s to %s' % (texture, material))
 
     if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'METALLIC', 'ROUGHNESS', 'NORMAL'}:
@@ -255,6 +255,7 @@ def add_texture_to_material(image, scale, offset, extension, contextMaterialWrap
     img_wrap.image = image
     img_wrap.scale = scale
     img_wrap.translation = offset
+    img_wrap.rotation[2] = angle
     img_wrap.extension = 'REPEAT'
     
     if extension == 'alpha':
@@ -451,14 +452,15 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 elif tiling & 0x40:
                     extension = 'alpha'
                 elif tiling & 0x80:
-                    tinting = 'tint'
+                    tintflag = 'tint'
                 elif tiling & 0x100:
-                    tinting = 'noAlpha'
+                    tintflag = 'noAlpha'
                 elif tiling & 0x200:
-                    tinting = 'RGBtint'
+                    tintflag = 'RGBtint'
 
             elif temp_chunk.ID == MAT_MAP_ANG:
-                print("\nwarning: ignoring UV rotation")
+                angle = read_float(temp_chunk)
+                print("\nwarning: UV angle mapped to z-rotation")
 
             skip_to_end(file, temp_chunk)
             new_chunk.bytes_read += temp_chunk.bytes_read
@@ -466,7 +468,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         # add the map to the material in the right channel
         if img:
             add_texture_to_material(img, (u_scale, v_scale, 1),
-                                    (u_offset, v_offset, 0), extension, contextMaterialWrapper, mapto)
+                                    (u_offset, v_offset, 0), angle, extension, contextMaterialWrapper, mapto)
 
     dirname = os.path.dirname(file.name)
 
@@ -810,8 +812,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
         elif new_chunk.ID == EK_OB_INSTANCE_NAME:
             object_name, read_str_len = read_string(file)
-            # child.name = object_name
-            child.name += "." + object_name
+            if child.name == '$$$DUMMY':
+                child.name = object_name
+            else: child.name += "." + object_name
             object_dictionary[object_name] = child
             new_chunk.bytes_read += read_str_len
             # print("new instance object:", object_name)
