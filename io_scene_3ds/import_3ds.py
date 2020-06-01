@@ -546,12 +546,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             read_chunk(file, temp_chunk)
             # only available color is emission color
                if temp_chunk.ID == MAT_FLOAT_COLOR:
-               contextMaterialWrapper.emission_color = read_float_color(temp_chunk)
+               contextMaterial.line_color[:3] = read_float_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3f'))
 #               temp_chunk.bytes_read += 12
 #               contextMaterial.mirCol = [float(col) for col in struct.unpack('<3f', temp_data)]
             elif temp_chunk.ID == MAT_24BIT_COLOR:
-                contextMaterialWrapper.emission_color = read_byte_color(temp_chunk)
+                contextMaterial.line_color[:3] = read_byte_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3B'))
 #               temp_chunk.bytes_read += 3
 #               contextMaterial.mirCol = [float(col)/255 for col in struct.unpack('<3B', temp_data)] # data [0,1,2] == rgb
@@ -563,12 +563,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             #print 'elif new_chunk.ID == MAT_DIFFUSE:'
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == MAT_FLOAT_COLOR:
-                contextMaterialWrapper.base_color = read_float_color(temp_chunk)
+                contextMaterial.diffuse_color[:3] = read_float_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3f'))
 #               temp_chunk.bytes_read += 12
 #               contextMaterial.rgbCol = [float(col) for col in struct.unpack('<3f', temp_data)]
             elif temp_chunk.ID == MAT_24BIT_COLOR:
-                contextMaterialWrapper.base_color = read_byte_color(temp_chunk)
+                contextMaterial.diffuse_color[:3] = read_byte_color(temp_chunk)
 #               temp_data = file.read(struct.calcsize('3B'))
 #               temp_chunk.bytes_read += 3
 #               contextMaterial.rgbCol = [float(col)/255 for col in struct.unpack('<3B', temp_data)] # data [0,1,2] == rgb
@@ -626,11 +626,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             if temp_chunk.ID == PERCENTAGE_SHORT:
                 temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
                 temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                contextMaterialWrapper.roughness = (float(struct.unpack('<H', temp_data)[0]) / 100)
+                contextMaterial.roughness = (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
                 temp_data = file.read(STRUCT_SIZE_FLOAT)
                 temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
-                contextMaterialWrapper.roughness = float(struct.unpack('f', temp_data)[0])
+                contextMaterial.roughness = float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
             
@@ -639,11 +639,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             if temp_chunk.ID == PERCENTAGE_SHORT:
                 temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
                 temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                contextMaterialWrapper.specular = (float(struct.unpack('<H', temp_data)[0]) / 100)
+                contextMaterial.specular_intensity = (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
                 temp_data = file.read(STRUCT_SIZE_FLOAT)
                 temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
-                contextMaterialWrapper.specular = float(struct.unpack('f', temp_data)[0])
+                contextMaterial.specular_intensity = float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
             
@@ -652,11 +652,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             if temp_chunk.ID == PERCENTAGE_SHORT:
                 temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
                 temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                contextMaterialWrapper.metallic = (float(struct.unpack('<H', temp_data)[0]) / 100)
+                contextMaterial.metallic = (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
                 temp_data = file.read(STRUCT_SIZE_FLOAT)
                 temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
-                contextMaterialWrapper.metallic = float(struct.unpack('f', temp_data)[0])
+                contextMaterial.metallic = float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
 
@@ -667,11 +667,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             if temp_chunk.ID == PERCENTAGE_SHORT:
                 temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
                 temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                contextMaterialWrapper.alpha = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
+                contextMaterial.diffuse_color[3] = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
                 temp_data = file.read(STRUCT_SIZE_FLOAT)
                 temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
-                contextMaterialWrapper.alpha = 1 - float(struct.unpack('f', temp_data)[0])
+                contextMaterial.diffuse_color[3] = 1 - float(struct.unpack('f', temp_data)[0])
             else:
                 print( "Cannot read material transparency")
 
