@@ -413,8 +413,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
     def read_texture(new_chunk, temp_chunk, name, mapto):
 #        new_texture = bpy.data.textures.new(name, type='IMAGE')
-
         u_scale, v_scale, u_offset, v_offset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
+        contextMaterialWrapper.use_nodes = True
         mirror = False
         extension = 'wrap'
         while (new_chunk.bytes_read < new_chunk.length):
@@ -527,7 +527,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
             #print 'elif new_chunk.ID == MATERIAL:'
             contextMaterial = bpy.data.materials.new('Material')
-            contextMaterialWrapper = PrincipledBSDFWrapper(contextMaterial, is_readonly=False, use_nodes=True)
+            contextMaterialWrapper = PrincipledBSDFWrapper(contextMaterial, is_readonly=False, use_nodes=False)
 
         elif new_chunk.ID == MAT_NAME:
             #print 'elif new_chunk.ID == MAT_NAME:'
