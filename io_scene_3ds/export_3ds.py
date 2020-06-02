@@ -77,6 +77,11 @@ MAT_MAP_VSCALE = 0xA356   # V axis scaling
 MAT_MAP_UOFFSET = 0xA358  # U axis offset
 MAT_MAP_VOFFSET = 0xA35A  # V axis offset
 MAT_MAP_ANG = 0xA35C      # UV rotation around the z-axis in rad
+MAP_COL1 = 0xA360  # Tint Color1
+MAP_COL2 = 0xA362  # Tint Color2
+MAP_RCOL = 0xA364  # Red tint
+MAP_GCOL = 0xA366  # Green tint
+MAP_BCOL = 0xA368  # Blue tint
 
 MATTRANS = 0xA050  # Transparency value (100-OpacityValue) (percent)
 PCT = 0x0030  # Percent chunk
@@ -570,6 +575,13 @@ def make_material_texture_chunk(chunk_id, texslots, pct):
         mat_sub_voffset = _3ds_chunk(MAT_MAP_VOFFSET)
         mat_sub_voffset.add_variable("mapvoffset", _3ds_float(round(texslot.translation[1], 6)))
         mat_sub.add_subchunk(mat_sub_voffset)
+
+        if texslot.socket_dst.identifier in {'Base Color', 'Specular'} and socket.identifier == 'Alpha':
+            rgb = _3ds_chunk(MAP_COL1) # Add tint color
+            base = texslot.owner_shader.material.diffuse_color[:3]
+            spec = texslot.owner_shader.material.specular_color[:]
+            rgb.add_variable("mapcolor", _3ds_rgb_color(spec if tex.socket_dst.identifier == 'Specular' else base))
+            mat_sub.add_subchunk(rgb)
                      
     # store all textures for this mapto in order. This at least is what
     # the 3DS exporter did so far, afaik most readers will just skip
@@ -879,7 +891,7 @@ def make_faces_chunk(tri_list, mesh, materialDict):
 
     obj_smooth_chunk = _3ds_chunk(OBJECT_SMOOTH)
     for i, tri in enumerate(tri_list):
-        obj_smooth_chunk.add_variable("group_" + str(i),_3ds_uint(tri.group))
+        obj_smooth_chunk.add_variable("face_" + str(i),_3ds_uint(tri.group))
         face_chunk.add_subchunk(obj_smooth_chunk)
 
     return face_chunk
