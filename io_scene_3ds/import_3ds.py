@@ -632,11 +632,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             if temp_chunk.ID == PERCENTAGE_SHORT:
                 temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
                 temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                contextMaterial.roughness = (float(struct.unpack('<H', temp_data)[0]) / 100)
+                contextMaterial.roughness = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
                 temp_data = file.read(STRUCT_SIZE_FLOAT)
                 temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
-                contextMaterial.roughness = float(struct.unpack('f', temp_data)[0])
+                contextMaterial.roughness = 1 - float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
             
