@@ -97,6 +97,7 @@ OBJECT_VERTICES = 0x4110  # The objects vertices
 OBJECT_FACES = 0x4120  # The objects faces
 OBJECT_MATERIAL = 0x4130  # This is found if the object has a material, either texture map or color
 OBJECT_UV = 0x4140  # The UV texture coordinates
+OBJECT_SMOOTH = 0x4150  # The objects smooth groups
 OBJECT_TRANS_MATRIX = 0x4160  # The Object Matrix
 
 #>------ sub defines of KFDATA
@@ -545,7 +546,7 @@ def make_material_texture_chunk(chunk_id, texslots, pct):
 
         mat_sub_tile = _3ds_chunk(MAT_MAP_TILING)
         mat_sub_tile.add_variable("maptiling", _3ds_ushort(maptile))
-        if tex.socket_dst.identifier in {'Base Color', 'Specular'} and socket.identifier == 'Alpha':
+        if texslot.socket_dst.identifier in {'Base Color', 'Specular'} and socket.identifier == 'Alpha':
             ma_sub_tile.add_variable("tint", _3ds_ushort(tint))
         mat_sub.add_subchunk(mat_sub_tile)
         
@@ -660,7 +661,7 @@ def make_material_chunk(material, image):
                 diffuse = [link.from_node.image]
                 
         if diffuse:
-            matmap = make_uv_texture_chunk(MAT_DIFFUSEMAP, diffuse)
+            matmap = make_texture_chunk(MAT_DIFFUSEMAP, diffuse)
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 
@@ -686,20 +687,22 @@ class tri_wrapper(object):
 
     Used when converting faces to triangles"""
 
-    __slots__ = "vertex_index", "ma", "image", "faceuvs", "offset"
+    __slots__ = "vertex_index", "ma", "image", "faceuvs", "offset", "group"
 
-    def __init__(self, vindex=(0, 0, 0), ma=None, image=None, faceuvs=None):
+    def __init__(self, vindex=(0, 0, 0), ma=None, image=None, faceuvs=None, group=0):
         self.vertex_index = vindex
         self.ma = ma
         self.image = image
         self.faceuvs = faceuvs
         self.offset = [0, 0, 0]  # offset indices
+        self.group = group
 
 
 def extract_triangles(mesh):
     """Extract triangles from a mesh."""
     
     mesh.calc_loop_triangles()
+    (polygroup, count) = mesh.calc_smooth_groups(use_bitflags=True)
     
     tri_list = []
     do_uv = bool(mesh.uv_layers)
@@ -717,10 +720,13 @@ def extract_triangles(mesh):
             if img is not None:
                 img = img.name
 
+        smoothgroup = polygroup[face.polygon_index]
+
         if len(f_v) == 3:
             new_tri = tri_wrapper((f_v[0], f_v[1], f_v[2]), face.material_index, img)
             if (do_uv):
                 new_tri.faceuvs = uv_key(f_uv[0]), uv_key(f_uv[1]), uv_key(f_uv[2])
+            new_tri.group = smoothgroup if face.use_smooth else 0
             tri_list.append(new_tri)
 
     return tri_list
@@ -859,6 +865,11 @@ def make_faces_chunk(tri_list, mesh, materialDict):
             obj_material_chunk.add_variable("name", obj_material_names[i])
             obj_material_chunk.add_variable("face_list", obj_material_faces[i])
             face_chunk.add_subchunk(obj_material_chunk)
+
+    obj_smooth_chunk = _3ds_chunk(OBJECT_SMOOTH)
+    for i, tri in enumerate(tri_list):
+        obj_smooth_chunk.add_variable("group_" + str(i),_3ds_uint(tri.group))
+        face_chunk.add_subchunk(obj_smooth_chunk)
 
     return face_chunk
 
