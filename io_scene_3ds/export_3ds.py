@@ -69,8 +69,8 @@ MAT_SHINMAP = 0xA33C  # head for roughness map
 
 #>------ sub defines of MAT_MAP
 MATMAPFILE = 0xA300  # This holds the file name of a texture
-
 MAT_MAP_TILING = 0xa351   # 2nd bit (from LSB) is mirror UV flag
+MAT_MAP_TEXBLUR = 0xA353  # Texture blurring factor
 MAT_MAP_USCALE = 0xA354   # U axis scaling
 MAT_MAP_VSCALE = 0xA356   # V axis scaling
 MAT_MAP_UOFFSET = 0xA358  # U axis offset
@@ -547,9 +547,13 @@ def make_material_texture_chunk(chunk_id, texslots, pct):
         mat_sub_tile = _3ds_chunk(MAT_MAP_TILING)
         mat_sub_tile.add_variable("maptiling", _3ds_ushort(maptile))
         if texslot.socket_dst.identifier in {'Base Color', 'Specular'} and socket.identifier == 'Alpha':
-            ma_sub_tile.add_variable("tint", _3ds_ushort(tint))
+            mat_sub_tile.add_variable("tint", _3ds_ushort(tint))
         mat_sub.add_subchunk(mat_sub_tile)
-        
+
+        mat_sub_texblur = _3ds_chunk(MAT_MAP_TEXBLUR) # Based on observation this is usually 1.0
+        mat_sub_texblur.add_variable("maptexblur", _3ds_float(1.0))
+        mat_sub.add_subchunk(mat_sub_texblur)
+
         mat_sub_uscale = _3ds_chunk(MAT_MAP_USCALE)
         mat_sub_uscale.add_variable("mapuscale", _3ds_float(round(texslot.scale[0], 6)))
         mat_sub.add_subchunk(mat_sub_uscale)
