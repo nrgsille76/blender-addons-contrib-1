@@ -66,6 +66,7 @@ MAT_REFLMAP = 0xA220  # head for reflect map
 MAT_BUMPMAP = 0xA230  # head for normal map
 MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
 MAT_SHINMAP = 0xA33C  # head for roughness map
+MAT_SELFIMAP = 0xA33D  # head for emission map
 
 #>------ sub defines of MAT_MAP
 MATMAPFILE = 0xA300  # This holds the file name of a texture
@@ -647,6 +648,12 @@ def make_material_chunk(material, image):
             roughness = [wrap.roughness_texture]
             r_pct = material.roughness
             matmap = make_material_texture_chunk(MAT_SHINMAP, roughness, r_pct)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+
+        if wrap.emission_color_texture:
+            emission = [wrap.emission_color_texture]
+            matmap = make_material_texture_chunk(MAT_SELFIMAP, emission, pct=1)
             if matmap:
                 material_chunk.add_subchunk(matmap)
         
