@@ -42,11 +42,12 @@ from bpy_extras import node_shader_utils
 PRIMARY = 0x4D4D
 
 #------ Main Chunks
-OBJECTINFO = 0x3D3D  # This gives the version of the mesh and is found right before the material and object information
 VERSION = 0x0002  # This gives the version of the .3ds file
 KFDATA = 0xB000  # This is the header for all of the key frame info
 
 #------ sub defines of OBJECTINFO
+OBJECTINFO = 0x3D3D  # Main mesh object chunk before the material and object information
+MESHVERSION = 0x3D3E  # This gives the version of the mesh
 MATERIAL = 45055  # 0xAFFF // This stored the texture info
 OBJECT = 16384  # 0x4000 // This stores the faces, vertices, etc...
 
@@ -1110,8 +1111,16 @@ def save(operator,
     version_chunk.add_variable("version", _3ds_uint(3))
     primary.add_subchunk(version_chunk)
 
-    # init main object info chunk:
+    # Init main object info chunk:
     object_info = _3ds_chunk(OBJECTINFO)
+    mesh_version = _3ds_chunk(MESHVERSION)
+    mesh_version.add_variable("mesh", _3ds_uint(3))
+    object_info.add_subchunk(mesh_version)
+
+    # Add MASTERSCALE element
+    mscale = _3ds_chunk(MASTERSCALE)
+    mscale.add_variable("scale", _3ds_float(1))
+    object_info.add_subchunk(mscale)
 
     ''' # COMMENTED OUT FOR 2.42 RELEASE!! CRASHES 3DS MAX
     # init main key frame data chunk:
@@ -1193,11 +1202,6 @@ def save(operator,
     # Make material chunks for all materials used in the meshes:
     for ma_image in materialDict.values():
         object_info.add_subchunk(make_material_chunk(ma_image[0], ma_image[1]))
-    
-    # Added MASTERSCALE element
-    mscale = _3ds_chunk(MASTERSCALE)
-    mscale.add_variable("scale", _3ds_float(1))
-    object_info.add_subchunk(mscale)
 
     # Give all objects a unique ID and build a dictionary from object name to object id:
     """
