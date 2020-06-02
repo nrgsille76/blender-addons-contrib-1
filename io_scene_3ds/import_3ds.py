@@ -75,6 +75,7 @@ MAT_REFLECTION_MAP = 0xA220  # This is a header for a new reflection map
 MAT_BUMP_MAP = 0xA230  # This is a header for a new bump map
 MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
 MAT_SHIN_MAP = 0xA33C  # This is a header for a new roughness map
+MAT_SELFI_MAP = 0xA33D  # This is a header for a new emission map
 MAT_MAP_FILEPATH = 0xA300  # This holds the file name of the texture
 
 MAT_MAP_TILING = 0xa351   # 2nd bit (from LSB) is mirror UV flag
@@ -232,7 +233,7 @@ def skip_to_end(file, skip_chunk):
 def add_texture_to_material(image, scale, offset, angle, extension, contextMaterialWrapper, mapto):
     #print('assigning %s to %s' % (texture, material))
 
-    if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'METALLIC', 'ROUGHNESS', 'NORMAL'}:
+    if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'METALLIC', 'ROUGHNESS', 'EMISSION', 'NORMAL'}:
         print(
             "\tError: Cannot map to %r\n\tassuming diffuse color. modify material %r later." %
             (mapto, contextMaterialWrapper.material.name)
@@ -249,6 +250,8 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextMater
         img_wrap = contextMaterialWrapper.metallic_texture
     elif mapto == 'ROUGHNESS':
         img_wrap = contextMaterialWrapper.roughness_texture
+    elif mapto == 'EMISSION':
+        img_wrap = contextMaterialWrapper.emission_color_texture
     elif mapto == 'NORMAL':
         img_wrap = contextMaterialWrapper.normalmap_texture
 
@@ -620,6 +623,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             
         elif new_chunk.ID == MAT_SHIN_MAP:
             read_texture(new_chunk, temp_chunk, "Shininess", "ROUGHNESS")
+
+        elif new_chunk.ID == MAT_SELFI_MAP:
+            read_texture(new_chunk, temp_chunk, "Emit", "EMISSION")
             
         elif new_chunk.ID == MAT_SHINESS:
             read_chunk(file, temp_chunk)
