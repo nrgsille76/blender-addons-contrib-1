@@ -915,16 +915,16 @@ def make_uv_chunk(uv_array):
     uv_chunk.add_variable("uv coords", uv_array)
     return uv_chunk
 
-
+'''
 def make_matrix_4x3_chunk(matrix):
     matrix_chunk = _3ds_chunk(OBJECT_TRANS_MATRIX)
     for vec in matrix.col:
         for f in vec[:3]:
             matrix_chunk.add_variable("matrix_f", _3ds_float(f))
     return matrix_chunk
+'''
 
-
-def make_mesh_chunk(mesh, matrix, materialDict):
+def make_mesh_chunk(ob, mesh, materialDict):
     """Make a chunk out of a Blender mesh."""
 
     # Extract the triangles from the mesh:
@@ -946,15 +946,34 @@ def make_mesh_chunk(mesh, matrix, materialDict):
 
     # add vertex chunk:
     mesh_chunk.add_subchunk(make_vert_chunk(vert_array))
+    
     # add faces chunk:
-
     mesh_chunk.add_subchunk(make_faces_chunk(tri_list, mesh, materialDict))
 
     # if available, add uv chunk:
     if uv_array:
         mesh_chunk.add_subchunk(make_uv_chunk(uv_array))
 
-    mesh_chunk.add_subchunk(make_matrix_4x3_chunk(matrix))
+    #mesh_chunk.add_subchunk(make_matrix_4x3_chunk(matrix))
+
+    # create transformation matrix chunk
+    matrix_chunk = _3ds_chunk(OBJECT_TRANS_MATRIX)
+    obj_matrix = mathutils.Matrix(ob.matrix_local.transposed())
+    
+    matrix_chunk.add_variable("xx", _3ds_float(obj_matrix[0].to_tuple(0)[0]))
+    matrix_chunk.add_variable("xy", _3ds_float(obj_matrix[0].to_tuple(0)[1]))
+    matrix_chunk.add_variable("xz", _3ds_float(obj_matrix[0].to_tuple(0)[2]))
+    matrix_chunk.add_variable("yx", _3ds_float(obj_matrix[1].to_tuple(0)[0]))
+    matrix_chunk.add_variable("yy", _3ds_float(obj_matrix[1].to_tuple(0)[1]))
+    matrix_chunk.add_variable("yz", _3ds_float(obj_matrix[1].to_tuple(0)[2]))
+    matrix_chunk.add_variable("zx", _3ds_float(obj_matrix[2].to_tuple(0)[0]))
+    matrix_chunk.add_variable("zy", _3ds_float(obj_matrix[2].to_tuple(0)[1]))
+    matrix_chunk.add_variable("zz", _3ds_float(obj_matrix[2].to_tuple(0)[2]))
+    matrix_chunk.add_variable("tx", _3ds_float(obj_matrix[3].to_tuple(0)[0]))
+    matrix_chunk.add_variable("ty", _3ds_float(obj_matrix[3].to_tuple(0)[1]))
+    matrix_chunk.add_variable("tz", _3ds_float(obj_matrix[3].to_tuple(0)[2]))
+        
+    mesh_chunk.add_subchunk(matrix_chunk)
 
     return mesh_chunk
 
@@ -1095,7 +1114,7 @@ def save(operator,
     """Save the Blender scene to a 3ds file."""
 
     # Time the export
-    time1 = time.clock()
+    duration = time.time()
     #Blender.Window.WaitCursor(1)
 
     if global_matrix is None:
@@ -1148,7 +1167,7 @@ def save(operator,
         if derived is None:
             continue
 
-        for ob_derived, ma in derived:
+        for ob_derived, mtx in derived:
             if ob.type not in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
                 continue
 
@@ -1159,7 +1178,7 @@ def save(operator,
                 data = None
 
             if data:
-                matrix = global_matrix @ ma
+                matrix = global_matrix @ mtx
                 data.transform(matrix)
                 mesh_objects.append((ob_derived, data, matrix))
                 ma_ls = data.materials
@@ -1214,7 +1233,7 @@ def save(operator,
 
     # Create object chunks for all meshes:
     i = 0
-    for ob, blender_mesh, matrix in mesh_objects:
+    for ob, blender_mesh in mesh_objects:
         # create a new object chunk
         object_chunk = _3ds_chunk(OBJECT)
 
@@ -1222,7 +1241,7 @@ def save(operator,
         object_chunk.add_variable("name", _3ds_string(sane_name(ob.name)))
 
         # make a mesh chunk out of the mesh:
-        object_chunk.add_subchunk(make_mesh_chunk(blender_mesh, matrix, materialDict))
+        object_chunk.add_subchunk(make_mesh_chunk(ob, blender_mesh, materialDict))
 
         # ensure the mesh has no over sized arrays
         # skip ones that do!, otherwise we cant write since the array size wont
@@ -1278,7 +1297,7 @@ def save(operator,
 
     # Debugging only: report the exporting time:
     #Blender.Window.WaitCursor(0)
-    print("3ds export time: %.2f" % (time.clock() - time1))
+    print("3ds export time: %.2f" % (time.time() - duration))
 
     # Debugging only: dump the chunk hierarchy:
     #primary.dump()
