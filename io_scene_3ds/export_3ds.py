@@ -87,9 +87,9 @@ MAP_BCOL = 0xA368  # Blue tint
 MATTRANS = 0xA050  # Transparency value (100-OpacityValue) (percent)
 PCT = 0x0030  # Percent chunk
 MASTERSCALE = 0x0100  # Master scale factor
-
-RGB1 = 0x0011
-RGB2 = 0x0012
+RGB = 0x0010  # RGB float
+RGB1 = 0x0011  # RGB Color1
+RGB2 = 0x0012  # RGB Color2
 
 #>------ sub defines of OBJECT
 OBJECT_MESH = 0x4100  # This lets us know that we are reading a new object
@@ -510,7 +510,7 @@ def make_texture_chunk(chunk_id, images):
     def add_image(img):
         filename = bpy.path.basename(image.filepath)
         ma_sub_file = _3ds_chunk(MATMAPFILE)
-        ma_sub_file.add_variable("mapfile", _3ds_string(sane_name(filename)))
+        ma_sub_file.add_variable("image", _3ds_string(sane_name(filename)))
         ma_sub.add_subchunk(ma_sub_file)
         
     for image in images:
@@ -539,22 +539,22 @@ def make_material_texture_chunk(chunk_id, texslots, pct):
             socket = link.from_socket.identifier
 
         maptile = 0
-        
-        if socket == 'Alpha':
-            maptile |= 0x40  # If alpha, diffuse and specular maps must be accompanied with a tinting bit
-            tint = 0x80 if texslot.image.colorspace_settings == 'Non-Color' else 0x200  # RGB tint
-            
+
         # no perfect mapping for mirror modes - 3DS only has uniform mirror w. repeat=2
-        elif texslot.extension == 'EXTEND':
+        if texslot.extension == 'EXTEND':
             maptile |= 0x1
         # CLIP maps to 3DS' decal flag
         elif texslot.extension == 'CLIP':
             maptile |= 0x10
 
         mat_sub_tile = _3ds_chunk(MAT_MAP_TILING)
-        mat_sub_tile.add_variable("maptiling", _3ds_ushort(maptile))
-        if texslot.socket_dst.identifier in {'Base Color', 'Specular'} and socket == 'Alpha':
-            mat_sub_tile.add_variable("tint", _3ds_ushort(tint))
+        mat_sub_tile.add_variable("tiling", _3ds_ushort(maptile))
+        if socket == 'Alpha':
+            alphaflag = 0x40  # If alpha, diffuse and specular maps must be accompanied with a tinting bit
+            mat_sub_tile.add_variable("alpha", _3ds_ushort(alphaflag))
+            if texslot.socket_dst.identifier in {'Base Color', 'Specular'}:
+                tint = 0x80 if texslot.image.colorspace_settings == 'Non-Color' else 0x200  # RGB tint
+                mat_sub_tile.add_variable("tint", _3ds_ushort(tint))
         mat_sub.add_subchunk(mat_sub_tile)
 
         mat_sub_texblur = _3ds_chunk(MAT_MAP_TEXBLUR) # Based on observation this is usually 1.0
@@ -628,20 +628,26 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
+        if wrap.base_color_texture:
+            color = [wrap.base_color_texture]
+            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, pct=1)
+            if matmap:
+                material_chunk.add_subchunk(matmap)
+
         if wrap.specular_texture:
             spec = [wrap.specular_texture]
             s_pct = material.specular_intensity
             matmap = make_material_texture_chunk(MAT_SPECMAP, spec, s_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
-            
+
         if wrap.alpha_texture:
             alpha = [wrap.alpha_texture]
             a_pct = material.diffuse_color[3]
             matmap = make_material_texture_chunk(MAT_OPACMAP, alpha, a_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
-                
+ 
         if wrap.metallic_texture:
             metallic = [wrap.metallic_texture]
             m_pct = material.metallic
@@ -660,7 +666,7 @@ def make_material_chunk(material, image):
             if matmap:
                 material_chunk.add_subchunk(matmap)
                 material_chunk.add_subchunk(strength)
-                
+
         if wrap.roughness_texture:
             roughness = [wrap.roughness_texture]
             r_pct = material.roughness
@@ -673,26 +679,20 @@ def make_material_chunk(material, image):
             matmap = make_material_texture_chunk(MAT_SELFIMAP, emission, pct=1)
             if matmap:
                 material_chunk.add_subchunk(matmap)
-        
+
         # make sure no textures are lost. Everything that doesn't fit
         # into a channel is exported as diffuse texture
         diffuse = []
-        
-        if wrap.base_color_texture:
-            color = [wrap.base_color_texture]
-            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, pct=1)
-            if matmap:
-                material_chunk.add_subchunk(matmap)
-                
+
         for link in wrap.material.node_tree.links:
             if link.from_node.type == 'TEX_IMAGE' and link.to_node.type != 'BSDF_PRINCIPLED':
                 diffuse = [link.from_node.image]
-                
+ 
         if diffuse:
             matmap = make_texture_chunk(MAT_DIFFUSEMAP, diffuse)
             if matmap:
                 material_chunk.add_subchunk(matmap)
-                
+
     else:
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, material.line_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
@@ -701,12 +701,12 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.specular_intensity))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, material.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-material.diffuse_color[3]))
-        
+
         slots = [get_material_image(material)]  # can be None
-        
+
         if image:
             material_chunk.add_subchunk(make_texture_chunk(MAT_DIFFUSEMAP, slots))
-            
+ 
     return material_chunk
 
 
@@ -1159,6 +1159,8 @@ def save(operator,
         objects = (ob for ob in scene.objects if not ob.hide_viewport and ob.select_get(view_layer=layer))
     else:
         objects = (ob for ob in scene.objects if not ob.hide_viewport)
+    
+    light_objects = [ob for ob in objects if ob.type == 'LIGHT']
 
     for ob in objects:
         # get derived objects
@@ -1180,7 +1182,7 @@ def save(operator,
             if data:
                 matrix = global_matrix @ mtx
                 data.transform(matrix)
-                mesh_objects.append((ob_derived, data, matrix))
+                mesh_objects.append((ob_derived, data))
                 ma_ls = data.materials
                 ma_ls_len = len(ma_ls)
 
@@ -1261,6 +1263,20 @@ def save(operator,
         #blender_mesh.vertices = None
 
         i += i
+
+    # Create light object chunks
+    for ob in light_objects:
+        object_chunk = _3ds_chunk(OBJECT)
+        light_chunk = _3ds_chunk(OBJECT_LIGHT)
+        color_chunk = _3ds_chunk(RGB)
+        object_chunk.add_variable("light", _3ds_string(sane_name(ob.name)))
+        light_chunk.add_variable("location", _3ds_point_3d(ob.location))
+        color_chunk.add_variable("red", _3ds_float(ob.data.color[0]))
+        color_chunk.add_variable("green", _3ds_float(ob.data.color[1]))
+        color_chunk.add_variable("blue", _3ds_float(ob.data.color[2]))
+        light_chunk.add_subchunk(color_chunk)
+        object_chunk.add_subchunk(light_chunk)
+        object_info.add_subchunk(object_chunk)
 
     # Create chunks for all empties:
     ''' # COMMENTED OUT FOR 2.42 RELEASE!! CRASHES 3DS MAX
