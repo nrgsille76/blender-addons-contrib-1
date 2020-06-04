@@ -924,7 +924,7 @@ def make_matrix_4x3_chunk(matrix):
     return matrix_chunk
 '''
 
-def make_mesh_chunk(ob, mesh, materialDict):
+def make_mesh_chunk(ob, mesh, matrix, materialDict):
     """Make a chunk out of a Blender mesh."""
 
     # Extract the triangles from the mesh:
@@ -958,7 +958,7 @@ def make_mesh_chunk(ob, mesh, materialDict):
 
     # create transformation matrix chunk
     matrix_chunk = _3ds_chunk(OBJECT_TRANS_MATRIX)
-    obj_matrix = mathutils.Matrix(ob.matrix_local.transposed())
+    obj_matrix = mathutils.Matrix(matrix.transposed())
     
     matrix_chunk.add_variable("xx", _3ds_float(obj_matrix[0].to_tuple(0)[0]))
     matrix_chunk.add_variable("xy", _3ds_float(obj_matrix[0].to_tuple(0)[1]))
@@ -1182,7 +1182,7 @@ def save(operator,
             if data:
                 matrix = global_matrix @ mtx
                 data.transform(matrix)
-                mesh_objects.append((ob_derived, data))
+                mesh_objects.append((ob_derived, data, matrix))
                 ma_ls = data.materials
                 ma_ls_len = len(ma_ls)
 
@@ -1235,7 +1235,7 @@ def save(operator,
 
     # Create object chunks for all meshes:
     i = 0
-    for ob, blender_mesh in mesh_objects:
+    for ob, blender_mesh, matrix in mesh_objects:
         # create a new object chunk
         object_chunk = _3ds_chunk(OBJECT)
 
@@ -1243,7 +1243,7 @@ def save(operator,
         object_chunk.add_variable("name", _3ds_string(sane_name(ob.name)))
 
         # make a mesh chunk out of the mesh:
-        object_chunk.add_subchunk(make_mesh_chunk(ob, blender_mesh, materialDict))
+        object_chunk.add_subchunk(make_mesh_chunk(ob, blender_mesh, matrix, materialDict))
 
         # ensure the mesh has no over sized arrays
         # skip ones that do!, otherwise we cant write since the array size wont
