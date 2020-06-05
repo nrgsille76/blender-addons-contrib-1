@@ -958,7 +958,7 @@ def make_mesh_chunk(ob, mesh, matrix, materialDict, translation):
 
     # create transformation matrix chunk
     matrix_chunk = _3ds_chunk(OBJECT_TRANS_MATRIX)
-    obj_matrix = mathutils.Matrix(matrix.transposed())
+    obj_matrix = matrix.transposed().to_3x3()
 
     if ob.parent is None:
         obj_translate = translation[ob.name]
