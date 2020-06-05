@@ -927,7 +927,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         if ob.type == 'MESH':
             pivot = pivot_list[ind]
             pivot_matrix = object_matrix.get(ob, mathutils.Matrix())  # unlikely to fail
-            pivot_matrix = mathutils.Matrix.Translation(pivot_matrix.to_3x3() @ -pivot)
+            pivot_matrix = mathutils.Matrix.Translation(-1*pivot)
+            #pivot_matrix = mathutils.Matrix.Translation(pivot_matrix.to_3x3() @ -pivot)
             ob.data.transform(pivot_matrix)
 
 
