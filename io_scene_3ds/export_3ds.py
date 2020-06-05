@@ -853,16 +853,16 @@ def make_faces_chunk(tri_list, mesh, materialDict):
             img = tri.image
 
             try:
-                context_ma_face_array = unique_mats[ma, img][1]
+                context_face_array = unique_mats[ma, img][1]
             except:
                 name_str = ma if ma else "None"
                 if img:
                     name_str += img
 
-                context_ma_face_array = _3ds_array()
-                unique_mats[ma, img] = _3ds_string(sane_name(name_str)), context_ma_face_array
+                context_face_array = _3ds_array()
+                unique_mats[ma, img] = _3ds_string(sane_name(name_str)), context_face_array
 
-            context_ma_face_array.add(_3ds_ushort(i))
+            context_face_array.add(_3ds_ushort(i))
             # obj_material_faces[tri.ma].add(_3ds_ushort(i))
 
         face_chunk.add_variable("faces", face_list)
@@ -924,7 +924,7 @@ def make_matrix_4x3_chunk(matrix):
     return matrix_chunk
 '''
 
-def make_mesh_chunk(ob, mesh, matrix, materialDict):
+def make_mesh_chunk(ob, mesh, matrix, materialDict, translation):
     """Make a chunk out of a Blender mesh."""
 
     # Extract the triangles from the mesh:
@@ -959,19 +959,25 @@ def make_mesh_chunk(ob, mesh, matrix, materialDict):
     # create transformation matrix chunk
     matrix_chunk = _3ds_chunk(OBJECT_TRANS_MATRIX)
     obj_matrix = mathutils.Matrix(matrix.transposed())
-    
-    matrix_chunk.add_variable("xx", _3ds_float(obj_matrix[0].to_tuple(0)[0]))
-    matrix_chunk.add_variable("xy", _3ds_float(obj_matrix[0].to_tuple(0)[1]))
-    matrix_chunk.add_variable("xz", _3ds_float(obj_matrix[0].to_tuple(0)[2]))
-    matrix_chunk.add_variable("yx", _3ds_float(obj_matrix[1].to_tuple(0)[0]))
-    matrix_chunk.add_variable("yy", _3ds_float(obj_matrix[1].to_tuple(0)[1]))
-    matrix_chunk.add_variable("yz", _3ds_float(obj_matrix[1].to_tuple(0)[2]))
-    matrix_chunk.add_variable("zx", _3ds_float(obj_matrix[2].to_tuple(0)[0]))
-    matrix_chunk.add_variable("zy", _3ds_float(obj_matrix[2].to_tuple(0)[1]))
-    matrix_chunk.add_variable("zz", _3ds_float(obj_matrix[2].to_tuple(0)[2]))
-    matrix_chunk.add_variable("tx", _3ds_float(obj_matrix[3].to_tuple(0)[0]))
-    matrix_chunk.add_variable("ty", _3ds_float(obj_matrix[3].to_tuple(0)[1]))
-    matrix_chunk.add_variable("tz", _3ds_float(obj_matrix[3].to_tuple(0)[2]))
+
+    if ob.parent is None:
+        obj_translate = translation[ob.name]
+
+    else:  # Calculate child matrix translation relative to parent
+        obj_translate = translation[ob.name].cross(-1*translation[ob.parent.name])
+
+    matrix_chunk.add_variable("xx", _3ds_float(obj_matrix[0].to_tuple(6)[0]))
+    matrix_chunk.add_variable("xy", _3ds_float(obj_matrix[0].to_tuple(6)[1]))
+    matrix_chunk.add_variable("xz", _3ds_float(obj_matrix[0].to_tuple(6)[2]))
+    matrix_chunk.add_variable("yx", _3ds_float(obj_matrix[1].to_tuple(6)[0]))
+    matrix_chunk.add_variable("yy", _3ds_float(obj_matrix[1].to_tuple(6)[1]))
+    matrix_chunk.add_variable("yz", _3ds_float(obj_matrix[1].to_tuple(6)[2]))
+    matrix_chunk.add_variable("zx", _3ds_float(obj_matrix[2].to_tuple(6)[0]))
+    matrix_chunk.add_variable("zy", _3ds_float(obj_matrix[2].to_tuple(6)[1]))
+    matrix_chunk.add_variable("zz", _3ds_float(obj_matrix[2].to_tuple(6)[2]))
+    matrix_chunk.add_variable("tx", _3ds_float(obj_translate.to_tuple(6)[0]))
+    matrix_chunk.add_variable("ty", _3ds_float(obj_translate.to_tuple(6)[1]))
+    matrix_chunk.add_variable("tz", _3ds_float(obj_translate.to_tuple(6)[2]))
         
     mesh_chunk.add_subchunk(matrix_chunk)
 
@@ -1225,17 +1231,19 @@ def save(operator,
         object_info.add_subchunk(make_material_chunk(ma_image[0], ma_image[1]))
 
     # Give all objects a unique ID and build a dictionary from object name to object id:
+    translation = {}  # Collect translation for tranformation matrix
+    #name_to_id = {}
+    for ob, data, matrix in mesh_objects:
+        translation[ob.name] = ob.location
+        #name_to_id[ob.name]= len(name_to_id)
     """
-    name_to_id = {}
-    for ob, data in mesh_objects:
-        name_to_id[ob.name]= len(name_to_id)
     #for ob in empty_objects:
     #    name_to_id[ob.name]= len(name_to_id)
     """
 
     # Create object chunks for all meshes:
     i = 0
-    for ob, blender_mesh, matrix in mesh_objects:
+    for ob, mesh, matrix in mesh_objects:
         # create a new object chunk
         object_chunk = _3ds_chunk(OBJECT)
 
@@ -1243,7 +1251,7 @@ def save(operator,
         object_chunk.add_variable("name", _3ds_string(sane_name(ob.name)))
 
         # make a mesh chunk out of the mesh:
-        object_chunk.add_subchunk(make_mesh_chunk(ob, blender_mesh, matrix, materialDict))
+        object_chunk.add_subchunk(make_mesh_chunk(ob, mesh, matrix, materialDict, translation))
 
         # ensure the mesh has no over sized arrays
         # skip ones that do!, otherwise we cant write since the array size wont
