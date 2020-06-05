@@ -549,13 +549,18 @@ def make_material_texture_chunk(chunk_id, texslots, pct):
 
         mat_sub_tile = _3ds_chunk(MAT_MAP_TILING)
         mat_sub_tile.add_variable("tiling", _3ds_ushort(maptile))
-        if socket == 'Alpha':
-            alphaflag = 0x40  # If alpha, diffuse and specular maps must be accompanied with a tinting bit
-            mat_sub_tile.add_variable("alpha", _3ds_ushort(alphaflag))
-            if texslot.socket_dst.identifier in {'Base Color', 'Specular'}:
-                tint = 0x80 if texslot.image.colorspace_settings == 'Non-Color' else 0x200  # RGB tint
-                mat_sub_tile.add_variable("tint", _3ds_ushort(tint))
         mat_sub.add_subchunk(mat_sub_tile)
+
+        if socket=='Alpha':
+            mat_sub_alpha = _3ds_chunk(MAP_TILING)
+            alphaflag = 0x40  # summed area sampling 0x20
+            mat_sub_alpha.add_variable("alpha", _3ds_ushort(alphaflag))
+            mat_sub.add_subchunk(mat_sub_alpha)
+            if texslot.socket_dst.identifier in {'Base Color', 'Specular'}:
+                mat_sub_tint = _3ds_chunk(MAP_TILING)  # RGB tint 0x200
+                tint = 0x80 if texslot.image.colorspace_settings.name=='Non-Color' else 0x200 
+                mat_sub_tint.add_variable("tint", _3ds_ushort(tint))
+                mat_sub.add_subchunk(mat_sub_tint)
 
         mat_sub_texblur = _3ds_chunk(MAT_MAP_TEXBLUR) # Based on observation this is usually 1.0
         mat_sub_texblur.add_variable("maptexblur", _3ds_float(1.0))
