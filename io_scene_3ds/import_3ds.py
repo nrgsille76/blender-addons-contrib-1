@@ -797,7 +797,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                                ED_KEY_SPOTLIGHT_NODE}:  # another object is being processed
             child = None
 
-        elif new_chunk.ID == EK_OB_NODE_HEADER:
+        elif new_chunk.ID in {EK_OB_NODE_HEADER, ED_KEY_LIGHT_NODE}:
             object_name, read_str_len = read_string(file)
             new_chunk.bytes_read += read_str_len
             temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
