@@ -147,7 +147,7 @@ EK_OB_ROTATION_TRACK = 0xB021
 EK_OB_SCALE_TRACK = 0xB022
 # EK_OB_CAMERA_FOV_TRACK = 0xB023
 # EK_OB_CAMERA_ROLL_TRACK = 0xB024
-# EK_OB_COLOR_TRACK = 0xB025
+EK_OB_COLOR_TRACK = 0xB025
 # EK_OB_MORPH_TRACK = 0xB026
 # EK_OB_HOTSPOT_TRACK = 0xB027
 # EK_OB_FALLOF_TRACK = 0xB028
@@ -684,22 +684,23 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
-
+            has_color = False
             temp_data = file.read(STRUCT_SIZE_3FLOAT)
-
             x, y, z = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+            if temp_chunk.ID == RGB:
+                read_chunk(file, temp_chunk)
+                lightcolor = read_float_color(temp_chunk)
+                has_color = True
 
             # no lamp in dict that would be confusing
             contextLamp[1] = bpy.data.lights.new("Lamp", 'POINT')
             contextLamp[0] = ob = bpy.data.objects.new("Lamp", contextLamp[1])
-
             context.view_layer.active_layer_collection.collection.objects.link(ob)
             importedObjects.append(contextLamp[0])
-
-            #print 'number of faces: ', num_faces
-            #print x,y,z
             contextLamp[0].location = x, y, z
+            if has_color:
+                newLight[1].color = lightcolor
 
             # Reset matrix
             contextMatrix_rot = None
@@ -887,6 +888,25 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
                 if nframe == 0:
                     child.scale = sca
+
+        elif new_chunk.ID == EK_OB_COLOR_TRACK and child.type == 'LIGHT':  # Color
+            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 5
+            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 5)
+            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            nkeys = struct.unpack('<H', temp_data)[0]
+            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
+            for i in range(nkeys):
+                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                nframe = struct.unpack('<H', temp_data)[0]
+                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
+                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
+                temp_data = file.read(STRUCT_SIZE_3FLOAT)
+                rgb = struct.unpack('<3f', temp_data)
+                new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+                if nframe == 0:
+                    child.scale = rgb
 
         else:  # (new_chunk.ID!=VERSION or new_chunk.ID!=OBJECTINFO or new_chunk.ID!=OBJECT or new_chunk.ID!=MATERIAL):
             # print 'skipping to end of this chunk'
