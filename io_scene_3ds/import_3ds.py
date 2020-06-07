@@ -230,7 +230,7 @@ def skip_to_end(file, skip_chunk):
     skip_chunk.bytes_read += buffer_size
 
 
-def add_texture_to_material(image, scale, offset, angle, extension, contextWrapper, mapto):
+def add_texture_to_material(image, scale, offset, angle, extension, contextWrapper, alphaflag, mapto):
     #print('assigning %s to %s' % (texture, material))
 
     if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'METALLIC', 'ROUGHNESS', 'EMISSION', 'NORMAL'}:
@@ -272,7 +272,7 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         img_wrap.extension = 'EXTEND'
     elif extension == 'noWrap':
         img_wrap.extension = 'CLIP'
-    if extension == 'alpha':
+    if alphaflag == 'alpha':
         img_wrap.owner_shader.material.node_tree.links.new(img_wrap.node_image.outputs['Alpha'], img_wrap.socket_dst)
 
 
@@ -410,13 +410,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]
 
     def read_texture(new_chunk, temp_chunk, name, mapto):
-#        new_texture = bpy.data.textures.new(name, type='IMAGE')
         u_scale, v_scale, u_offset, v_offset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
-        contextMaterialWrapper.use_nodes = True
+        contextWrapper.use_nodes = True
         mirror = False
         extension = 'wrap'
+        alphaflag = False
+        
         while (new_chunk.bytes_read < new_chunk.length):
-            #print 'MAT_TEXTURE_MAP..while', new_chunk.bytes_read, new_chunk.length
             read_chunk(file, temp_chunk)
 
             if temp_chunk.ID == MAT_MAP_FILEPATH:
@@ -446,9 +446,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 elif tiling & 0x10:
                     extension = 'noWrap'
                 elif tiling & 0x20:
-                    extension = 'sat'
+                    alphaflag = 'sat'
                 elif tiling & 0x40:
-                    extension = 'alpha'
+                    alphaflag = 'alpha'
                 elif tiling & 0x80:
                     tintflag = 'tint'
                 elif tiling & 0x100:
@@ -466,7 +466,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         # add the map to the material in the right channel
         if img:
             add_texture_to_material(img, (u_scale, v_scale, 1),
-                                    (u_offset, v_offset, 0), angle, extension, contextWrapper, mapto)
+                                    (u_offset, v_offset, 0), angle, extension, contextWrapper, alphaflag, mapto)
 
     dirname = os.path.dirname(file.name)
 
@@ -663,7 +663,6 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_U_SHORT)
             num_verts = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
-
             contextMesh_vertls = struct.unpack('<%df' % (num_verts * 3), file.read(SZ_3FLOAT * num_verts))
             new_chunk.bytes_read += SZ_3FLOAT * num_verts
             # dummyvert is not used atm!
@@ -672,7 +671,6 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_U_SHORT)
             num_faces = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
-
             temp_data = file.read(SZ_4U_SHORT * num_faces)
             new_chunk.bytes_read += SZ_4U_SHORT * num_faces  # 4 short ints x 2 bytes each
             contextMesh_facels = struct.unpack('<%dH' % (num_faces * 4), temp_data)
