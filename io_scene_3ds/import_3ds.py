@@ -918,10 +918,6 @@ def load_3ds(filepath,
     object_matrix.clear()
 
     scn = context.scene
-#   scn = bpy.data.scenes.active
-#    SCN = scn
-#   SCN_OBJECTS = scn.objects
-#   SCN_OBJECTS.selected = [] # de select all
 
     importedObjects = []  # Fill this list with objects
     process_next_chunk(context, file, current_chunk, importedObjects, IMAGE_SEARCH)
@@ -944,7 +940,7 @@ def load_3ds(filepath,
     # print(importedObjects)
     if global_matrix:
         for ob in importedObjects:
-            if ob.parent is None:
+            if ob.type == 'MESH' and ob.parent is None:
                 ob.matrix_world = ob.matrix_world @ global_matrix
 
     for ob in importedObjects:
