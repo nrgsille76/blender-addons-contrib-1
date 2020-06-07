@@ -279,33 +279,28 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextMater
 def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEARCH):
     from bpy_extras.image_utils import load_image
 
-    #print previous_chunk.bytes_read, 'BYTES READ'
     contextObName = None
     contextLamp = [None, None]  # object, Data
     contextMaterial = None
     contextMaterialWrapper = None
-    contextMatrix_rot = None  # Blender.mathutils.Matrix(); contextMatrix.identity()
-    #contextMatrix_tx = None # Blender.mathutils.Matrix(); contextMatrix.identity()
-    contextMesh_vertls = None  # flat array: (verts * 3)
+    contextMatrix_rot = None
+    contextMesh_vertls = None
     contextMesh_facels = None
-    contextMeshMaterials = []  # (matname, [face_idxs])
-    contextMeshUV = None  # flat array (verts * 2)
+    contextMeshMaterials = []
+    contextMeshUV = None
 
     TEXTURE_DICT = {}
     MATDICT = {}
-#   TEXMODE = Mesh.FaceModes['TEX']
 
     # Localspace variable names, faster.
-    STRUCT_SIZE_FLOAT = struct.calcsize('f')
-    STRUCT_SIZE_2FLOAT = struct.calcsize('2f')
-    STRUCT_SIZE_3FLOAT = struct.calcsize('3f')
-    STRUCT_SIZE_4FLOAT = struct.calcsize('4f')
-    STRUCT_SIZE_UNSIGNED_SHORT = struct.calcsize('H')
-    STRUCT_SIZE_4UNSIGNED_SHORT = struct.calcsize('4H')
-    STRUCT_SIZE_4x3MAT = struct.calcsize('ffffffffffff')
-    # STRUCT_SIZE_4x3MAT = calcsize('ffffffffffff')
-    # print STRUCT_SIZE_4x3MAT, ' STRUCT_SIZE_4x3MAT'
-    # only init once
+    SZ_FLOAT = struct.calcsize('f')
+    SZ_2FLOAT = struct.calcsize('2f')
+    SZ_3FLOAT = struct.calcsize('3f')
+    SZ_4FLOAT = struct.calcsize('4f')
+    SZ_U_SHORT = struct.calcsize('H')
+    SZ_4U_SHORT = struct.calcsize('4H')
+    SZ_4x3MAT = struct.calcsize('ffffffffffff')
+
     object_list = []  # for hierarchy
     object_parent = []  # index of parent in hierarchy, 0xFFFF = no parent
     pivot_list = []  # pivots with hierarchy handling
@@ -395,24 +390,24 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
     CreateBlenderObject = False
 
     def read_float_color(temp_chunk):
-        temp_data = file.read(STRUCT_SIZE_3FLOAT)
-        temp_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+        temp_data = file.read(SZ_3FLOAT)
+        temp_chunk.bytes_read += SZ_3FLOAT
         return [float(col) for col in struct.unpack('<3f', temp_data)]
 
     def read_float(temp_chunk):
-        temp_data = file.read(STRUCT_SIZE_FLOAT)
-        temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+        temp_data = file.read(SZ_FLOAT)
+        temp_chunk.bytes_read += SZ_FLOAT
         return struct.unpack('<f', temp_data)[0]
 
     def read_short(temp_chunk):
-        temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-        temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+        temp_data = file.read(SZ_U_SHORT)
+        temp_chunk.bytes_read += SZ_U_SHORT
         return struct.unpack('<H', temp_data)[0]
 
     def read_byte_color(temp_chunk):
         temp_data = file.read(struct.calcsize('3B'))
         temp_chunk.bytes_read += 3
-        return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]  # data [0,1,2] == rgb
+        return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]
 
     def read_texture(new_chunk, temp_chunk, name, mapto):
 #        new_texture = bpy.data.textures.new(name, type='IMAGE')
@@ -616,8 +611,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             read_texture(new_chunk, temp_chunk, "Bump", "NORMAL")
             
         elif new_chunk.ID == MAT_BUMP_PERCENT:
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT
             contextMaterialWrapper.normalmap_strength = (float(struct.unpack('<H', temp_data)[0]) / 100)
             new_chunk.bytes_read += temp_chunk.bytes_read
             
@@ -630,12 +625,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_SHINESS:
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
                 contextMaterial.roughness = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(STRUCT_SIZE_FLOAT)
-                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.roughness = 1 - float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
@@ -643,12 +638,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_SHIN2:
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
                 contextMaterial.specular_intensity = (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(STRUCT_SIZE_FLOAT)
-                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.specular_intensity = float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
@@ -656,12 +651,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_SHIN3:
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
                 contextMaterial.metallic = (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(STRUCT_SIZE_FLOAT)
-                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.metallic = float(struct.unpack('f', temp_data)[0])
                 
             new_chunk.bytes_read += temp_chunk.bytes_read
@@ -671,12 +666,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             read_chunk(file, temp_chunk)
 
             if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-                temp_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
                 contextMaterial.diffuse_color[3] = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
             elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(STRUCT_SIZE_FLOAT)
-                temp_chunk.bytes_read += STRUCT_SIZE_FLOAT
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.diffuse_color[3] = 1 - float(struct.unpack('f', temp_data)[0])
             else:
                 print( "Cannot read material transparency")
@@ -684,9 +679,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
-            temp_data = file.read(STRUCT_SIZE_3FLOAT)
+            temp_data = file.read(SZ_3FLOAT)
             x, y, z = struct.unpack('<3f', temp_data)
-            new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+            new_chunk.bytes_read += SZ_3FLOAT
 
             # no lamp in dict that would be confusing
             contextLamp[1] = bpy.data.lights.new("Lamp", 'POINT')
@@ -710,27 +705,27 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             Worldspace vertex locations
             """
             # print 'elif new_chunk.ID == OBJECT_VERTICES:'
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            temp_data = file.read(SZ_U_SHORT)
             num_verts = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
 
             # print 'number of verts: ', num_verts
-            contextMesh_vertls = struct.unpack('<%df' % (num_verts * 3), file.read(STRUCT_SIZE_3FLOAT * num_verts))
-            new_chunk.bytes_read += STRUCT_SIZE_3FLOAT * num_verts
+            contextMesh_vertls = struct.unpack('<%df' % (num_verts * 3), file.read(SZ_3FLOAT * num_verts))
+            new_chunk.bytes_read += SZ_3FLOAT * num_verts
             # dummyvert is not used atm!
 
             #print 'object verts: bytes read: ', new_chunk.bytes_read
 
         elif new_chunk.ID == OBJECT_FACES:
             # print 'elif new_chunk.ID == OBJECT_FACES:'
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            temp_data = file.read(SZ_U_SHORT)
             num_faces = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
             #print 'number of faces: ', num_faces
 
             # print '\ngetting a face'
-            temp_data = file.read(STRUCT_SIZE_4UNSIGNED_SHORT * num_faces)
-            new_chunk.bytes_read += STRUCT_SIZE_4UNSIGNED_SHORT * num_faces  # 4 short ints x 2 bytes each
+            temp_data = file.read(SZ_4U_SHORT * num_faces)
+            new_chunk.bytes_read += SZ_4U_SHORT * num_faces  # 4 short ints x 2 bytes each
             contextMesh_facels = struct.unpack('<%dH' % (num_faces * 4), temp_data)
             contextMesh_facels = [contextMesh_facels[i - 3:i] for i in range(3, (num_faces * 4) + 3, 4)]
 
@@ -739,12 +734,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             material_name, read_str_len = read_string(file)
             new_chunk.bytes_read += read_str_len  # remove 1 null character.
 
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            temp_data = file.read(SZ_U_SHORT)
             num_faces_using_mat = struct.unpack('<H', temp_data)[0]
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
+            new_chunk.bytes_read += SZ_U_SHORT
 
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * num_faces_using_mat)
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * num_faces_using_mat
+            temp_data = file.read(SZ_U_SHORT * num_faces_using_mat)
+            new_chunk.bytes_read += SZ_U_SHORT * num_faces_using_mat
 
             temp_data = struct.unpack("<%dH" % (num_faces_using_mat), temp_data)
 
@@ -753,19 +748,19 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             #look up the material in all the materials
 
         elif new_chunk.ID == OBJECT_UV:
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            temp_data = file.read(SZ_U_SHORT)
             num_uv = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
 
-            temp_data = file.read(STRUCT_SIZE_2FLOAT * num_uv)
-            new_chunk.bytes_read += STRUCT_SIZE_2FLOAT * num_uv
+            temp_data = file.read(SZ_2FLOAT * num_uv)
+            new_chunk.bytes_read += SZ_2FLOAT * num_uv
             contextMeshUV = struct.unpack('<%df' % (num_uv * 2), temp_data)
 
         elif new_chunk.ID == OBJECT_TRANS_MATRIX:
             # How do we know the matrix size? 54 == 4x4 48 == 4x3
-            temp_data = file.read(STRUCT_SIZE_4x3MAT)
+            temp_data = file.read(SZ_4x3MAT)
             data = list(struct.unpack('<ffffffffffff', temp_data))
-            new_chunk.bytes_read += STRUCT_SIZE_4x3MAT
+            new_chunk.bytes_read += SZ_4x3MAT
 
             contextMatrix_rot = mathutils.Matrix((data[:3] + [0],
                                                   data[3:6] + [0],
@@ -781,6 +776,16 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += read_str_len  # plus one for the null character that gets removed
         elif new_chunk.ID == EDITKEYFRAME:
             pass
+        
+        elif new_chunk.ID == KFDATA_KFSEG:
+            temp_data = file.read(struct.calcsize('I'))
+            start = struct.unpack('<I', temp_data)[0]
+            new_chunk.bytes_read += 4
+            context.scene.frame_start = start
+            temp_data = file.read(struct.calcsize('I'))
+            stop = struct.unpack('<I', temp_data)[0]
+            new_chunk.bytes_read += 4
+            context.scene.frame_end = stop
 
         # including these here means their EK_OB_NODE_HEADER are scanned
         elif new_chunk.ID in {ED_KEY_AMBIENT_NODE,
@@ -795,9 +800,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID in {EK_OB_NODE_HEADER, ED_KEY_LIGHT_NODE}:
             object_name, read_str_len = read_string(file)
             new_chunk.bytes_read += read_str_len
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
+            temp_data = file.read(SZ_U_SHORT * 2)
             new_chunk.bytes_read += 4
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            temp_data = file.read(SZ_U_SHORT)
             hierarchy = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
 
@@ -822,84 +827,84 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             # print("new instance object:", object_name)
 
         elif new_chunk.ID == EK_OB_PIVOT:  # translation
-                temp_data = file.read(STRUCT_SIZE_3FLOAT)
+                temp_data = file.read(SZ_3FLOAT)
                 pivot = struct.unpack('<3f', temp_data)
-                new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+                new_chunk.bytes_read += SZ_3FLOAT
                 pivot_list[len(pivot_list) - 1] = mathutils.Vector(pivot)
 
         elif new_chunk.ID == EK_OB_POSITION_TRACK:  # translation
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 5
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 5)
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 5
+            temp_data = file.read(SZ_U_SHORT * 5)
+            temp_data = file.read(SZ_U_SHORT)
             nkeys = struct.unpack('<H', temp_data)[0]
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 2
             for i in range(nkeys):
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_data = file.read(SZ_U_SHORT)
                 nframe = struct.unpack('<H', temp_data)[0]
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
-                temp_data = file.read(STRUCT_SIZE_3FLOAT)
+                new_chunk.bytes_read += SZ_U_SHORT
+                temp_data = file.read(SZ_U_SHORT * 2)
+                new_chunk.bytes_read += SZ_U_SHORT * 2
+                temp_data = file.read(SZ_3FLOAT)
                 loc = struct.unpack('<3f', temp_data)
-                new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+                new_chunk.bytes_read += SZ_3FLOAT
                 if nframe == 0:
                     child.location = loc
 
-        elif new_chunk.ID == EK_OB_ROTATION_TRACK:  # rotation
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 5
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 5)
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+        elif new_chunk.ID == EK_OB_ROTATION_TRACK and child.type == 'MESH':  # rotation
+            new_chunk.bytes_read += SZ_U_SHORT * 5
+            temp_data = file.read(SZ_U_SHORT * 5)
+            temp_data = file.read(SZ_U_SHORT)
             nkeys = struct.unpack('<H', temp_data)[0]
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 2
             for i in range(nkeys):
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_data = file.read(SZ_U_SHORT)
                 nframe = struct.unpack('<H', temp_data)[0]
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
-                temp_data = file.read(STRUCT_SIZE_4FLOAT)
+                new_chunk.bytes_read += SZ_U_SHORT
+                temp_data = file.read(SZ_U_SHORT * 2)
+                new_chunk.bytes_read += SZ_U_SHORT * 2
+                temp_data = file.read(SZ_4FLOAT)
                 rad, axis_x, axis_y, axis_z = struct.unpack("<4f", temp_data)
-                new_chunk.bytes_read += STRUCT_SIZE_4FLOAT
+                new_chunk.bytes_read += SZ_4FLOAT
                 if nframe == 0:
                     child.rotation_euler = mathutils.Quaternion((axis_x, axis_y, axis_z), -rad).to_euler()   # why negative?
 
-        elif new_chunk.ID == EK_OB_SCALE_TRACK:  # translation
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 5
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 5)
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+        elif new_chunk.ID == EK_OB_SCALE_TRACK and child.type == 'MESH':  # translation
+            new_chunk.bytes_read += SZ_U_SHORT * 5
+            temp_data = file.read(SZ_U_SHORT * 5)
+            temp_data = file.read(SZ_U_SHORT)
             nkeys = struct.unpack('<H', temp_data)[0]
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 2
             for i in range(nkeys):
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_data = file.read(SZ_U_SHORT)
                 nframe = struct.unpack('<H', temp_data)[0]
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
-                temp_data = file.read(STRUCT_SIZE_3FLOAT)
+                new_chunk.bytes_read += SZ_U_SHORT
+                temp_data = file.read(SZ_U_SHORT * 2)
+                new_chunk.bytes_read += SZ_U_SHORT * 2
+                temp_data = file.read(SZ_3FLOAT)
                 sca = struct.unpack('<3f', temp_data)
-                new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+                new_chunk.bytes_read += SZ_3FLOAT
                 if nframe == 0:
                     child.scale = sca
 
         elif new_chunk.ID == EK_OB_COLOR_TRACK and child.type == 'LIGHT':  # Color
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 5
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 5)
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 5
+            temp_data = file.read(SZ_U_SHORT * 5)
+            temp_data = file.read(SZ_U_SHORT)
             nkeys = struct.unpack('<H', temp_data)[0]
-            temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
-            new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 2
             for i in range(nkeys):
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT)
+                temp_data = file.read(SZ_U_SHORT)
                 nframe = struct.unpack('<H', temp_data)[0]
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT
-                temp_data = file.read(STRUCT_SIZE_UNSIGNED_SHORT * 2)
-                new_chunk.bytes_read += STRUCT_SIZE_UNSIGNED_SHORT * 2
-                temp_data = file.read(STRUCT_SIZE_3FLOAT)
+                new_chunk.bytes_read += SZ_U_SHORT
+                temp_data = file.read(SZ_U_SHORT * 2)
+                new_chunk.bytes_read += SZ_U_SHORT * 2
+                temp_data = file.read(SZ_3FLOAT)
                 rgb = struct.unpack('<3f', temp_data)
-                new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
+                new_chunk.bytes_read += SZ_3FLOAT
                 if nframe == 0:
                     child.scale = rgb
 
