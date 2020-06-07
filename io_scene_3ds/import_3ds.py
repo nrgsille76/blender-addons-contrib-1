@@ -684,14 +684,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
-            has_color = False
             temp_data = file.read(STRUCT_SIZE_3FLOAT)
             x, y, z = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += STRUCT_SIZE_3FLOAT
-            if temp_chunk.ID == RGB:
-                read_chunk(file, temp_chunk)
-                lightcolor = read_float_color(temp_chunk)
-                has_color = True
 
             # no lamp in dict that would be confusing
             contextLamp[1] = bpy.data.lights.new("Lamp", 'POINT')
@@ -699,13 +694,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             context.view_layer.active_layer_collection.collection.objects.link(ob)
             importedObjects.append(contextLamp[0])
             contextLamp[0].location = x, y, z
-            if has_color:
-                newLight[1].color = lightcolor
-
             # Reset matrix
             contextMatrix_rot = None
-            #contextMatrix_tx = None
-            #print contextLamp.name,
+
+        elif new_chunk.ID == RGB:
+            temp_data = file.read(SZ_3FLOAT)
+            contextLamp[1].data.color = struct.unpack('<3f', temp_data)
+            new_chunk.bytes_read += SZ_3FLOAT
 
         elif new_chunk.ID == OBJECT_MESH:
             # print 'Found an OBJECT_MESH chunk'
