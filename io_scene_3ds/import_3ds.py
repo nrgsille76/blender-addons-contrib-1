@@ -125,17 +125,17 @@ OBJECT_UV = 0x4140  # The UV texture coordinates
 OBJECT_TRANS_MATRIX = 0x4160  # The Object Matrix
 
 #>------ sub defines of EDITKEYFRAME
-ED_KEY_AMBIENT_NODE = 0xB001
-ED_KEY_OBJECT_NODE = 0xB002
-ED_KEY_CAMERA_NODE = 0xB003
-ED_KEY_TARGET_NODE = 0xB004
-ED_KEY_LIGHT_NODE = 0xB005
-ED_KEY_L_TARGET_NODE = 0xB006
-ED_KEY_SPOTLIGHT_NODE = 0xB007
+KFDATA_AMBIENT = 0xB001
+KFDATA_OBJECT = 0xB002
+KFDATA_CAMERA = 0xB003
+KFDATA_TARGET = 0xB004
+KFDATA_LIGHT = 0xB005
+KFDATA_L_TARGET = 0xB006
+KFDATA_SPOTLIGHT = 0xB007
+KFDATA_KFSEG = 0xB008
+# KFDATA_CURTIME = 0xB009
+# KFDATA_KFHDR = 0xB00A
 #>------ sub defines of ED_KEY_OBJECT_NODE
-# EK_OB_KEYFRAME_SEG = 0xB008
-# EK_OB_KEYFRAME_CURTIME = 0xB009
-# EK_OB_KEYFRAME_HEADER = 0xB00A
 EK_OB_NODE_HEADER = 0xB010
 EK_OB_INSTANCE_NAME = 0xB011
 # EK_OB_PRESCALE = 0xB012
@@ -723,16 +723,10 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             context.scene.frame_end = stop
 
         # including these here means their EK_OB_NODE_HEADER are scanned
-        elif new_chunk.ID in {ED_KEY_AMBIENT_NODE,
-                               ED_KEY_OBJECT_NODE,
-                               ED_KEY_CAMERA_NODE,
-                               ED_KEY_TARGET_NODE,
-                               ED_KEY_LIGHT_NODE,
-                               ED_KEY_L_TARGET_NODE,
-                               ED_KEY_SPOTLIGHT_NODE}:  # another object is being processed
+        elif new_chunk.ID in {KFDATA_AMBIENT, ED_KEY_OBJECT_NODE, KFDATA_CAMERA, KFDATA_TARGET, KFDATA_LIGHT}:  # another object is being processed
             child = None
 
-        elif new_chunk.ID in {EK_OB_NODE_HEADER, ED_KEY_LIGHT_NODE}:
+        elif new_chunk.ID in {EK_OB_NODE_HEADER, KFDATA_LIGHT}:
             object_name, read_str_len = read_string(file)
             new_chunk.bytes_read += read_str_len
             temp_data = file.read(SZ_U_SHORT * 2)
