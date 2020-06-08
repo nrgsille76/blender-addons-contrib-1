@@ -66,6 +66,7 @@ MAT_OPACMAP = 0xA210  # head for opacity map
 MAT_REFLMAP = 0xA220  # head for reflect map
 MAT_BUMPMAP = 0xA230  # head for normal map
 MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
+MAT_TEXMAP = 0xA33A  # head for secondary texture
 MAT_SHINMAP = 0xA33C  # head for roughness map
 MAT_SELFIMAP = 0xA33D  # head for emission map
 
@@ -686,7 +687,7 @@ def make_material_chunk(material, image):
                 material_chunk.add_subchunk(matmap)
 
         # make sure no textures are lost. Everything that doesn't fit
-        # into a channel is exported as diffuse texture
+        # into a channel is exported as secondary texture
         diffuse = []
 
         for link in wrap.material.node_tree.links:
@@ -694,7 +695,7 @@ def make_material_chunk(material, image):
                 diffuse = [link.from_node.image]
  
         if diffuse:
-            matmap = make_texture_chunk(MAT_DIFFUSEMAP, diffuse)
+            matmap = make_texture_chunk(MAT_TEXMAP, diffuse)
             if matmap:
                 material_chunk.add_subchunk(matmap)
 
