@@ -261,6 +261,8 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         for node in nodes:
             if node.label == 'Mixer':
                 links.new(img_wrap.outputs['Color'], node.inputs['Color2'])
+        if shader.inputs['Base Color'].is_linked == False:
+            links.new(img_wrap.outputs['Color'], shader.inputs['Base Color'])
 
     img_wrap.image = image
     img_wrap.extension = 'REPEAT'
