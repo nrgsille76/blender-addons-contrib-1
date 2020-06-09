@@ -232,13 +232,13 @@ def skip_to_end(file, skip_chunk):
 def add_texture_to_material(image, scale, offset, angle, extension, contextWrapper, alphaflag, mapto):
     shader = contextWrapper.node_principled_bsdf
     nodetree = contextWrapper.material.node_tree
-    node = nodetree.nodes
+    nodes = nodetree.nodes
     links = nodetree.links
 
     if mapto == 'COLOR':
-        mixer = node.new(type='ShaderNodeMixRGB')
+        mixer = nodes.new(type='ShaderNodeMixRGB')
         mixer.label = "Mixer"
-        newWrap._grid_to_location(0,1, dst_node=mixer, ref_node=shader)
+        contextWrapper._grid_to_location(0,1, dst_node=mixer, ref_node=shader)
         img_wrap = contextWrapper.base_color_texture
         links.new(img_wrap.node_image.outputs['Color'], mixer.inputs['Color1'])
         links.new(mixer.outputs["Color"], shader.inputs['Base Color'])
@@ -255,12 +255,12 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
     elif mapto == 'NORMAL':
         img_wrap = contextWrapper.normalmap_texture
     elif mapto == 'TEXTURE':
-        img_wrap = node.new(type='ShaderNodeTexImage')
+        img_wrap = nodes.new(type='ShaderNodeTexImage')
         img_wrap.label = image.name
-        newWrap._grid_to_location(-1,2, dst_node=img_wrap, ref_node=shader)
-        for node in newWrap.material.node_tree.nodes:
+        contextWrapper._grid_to_location(-1,2, dst_node=img_wrap, ref_node=shader)
+        for node in nodes:
             if node.label == 'Mixer':
-                newWrap.material.node_tree.links.new(img_wrap.outputs['Color'], node.inputs['Color2'])
+                links.new(img_wrap.outputs['Color'], node.inputs['Color2'])
 
     img_wrap.image = image
     img_wrap.extension = 'REPEAT'
