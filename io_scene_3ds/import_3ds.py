@@ -25,10 +25,8 @@
 import os
 import time
 import struct
-
 import bpy
 import mathutils
-
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 
 BOUNDS_3DS = []
@@ -74,6 +72,7 @@ MAT_OPACITY_MAP = 0xA210  # This is a header for a new opacity map
 MAT_REFLECTION_MAP = 0xA220  # This is a header for a new reflection map
 MAT_BUMP_MAP = 0xA230  # This is a header for a new bump map
 MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
+MAT_TEX2_MAP = 0xA33A  # This is a header for a secondary texture
 MAT_SHIN_MAP = 0xA33C  # This is a header for a new roughness map
 MAT_SELFI_MAP = 0xA33D  # This is a header for a new emission map
 MAT_MAP_FILEPATH = 0xA300  # This holds the file name of the texture
@@ -231,17 +230,18 @@ def skip_to_end(file, skip_chunk):
 
 
 def add_texture_to_material(image, scale, offset, angle, extension, contextWrapper, alphaflag, mapto):
-    #print('assigning %s to %s' % (texture, material))
-
-    if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'METALLIC', 'ROUGHNESS', 'EMISSION', 'NORMAL'}:
-        print(
-            "\tError: Cannot map to %r\n\tassuming diffuse color. modify material %r later." %
-            (mapto, contextWrapper.material.name)
-        )
-        mapto = "COLOR"
+    shader = contextWrapper.node_principled_bsdf
+    nodetree = contextWrapper.material.node_tree
+    node = nodetree.nodes
+    links = nodetree.links
 
     if mapto == 'COLOR':
+        mixer = node.new(type='ShaderNodeMixRGB')
+        mixer.label = "Mixer"
+        newWrap._grid_to_location(0,1, dst_node=mixer, ref_node=shader)
         img_wrap = contextWrapper.base_color_texture
+        links.new(img_wrap.node_image.outputs['Color'], mixer.inputs['Color1'])
+        links.new(mixer.outputs["Color"], shader.inputs['Base Color'])
     elif mapto == 'SPECULARITY':
         img_wrap = contextWrapper.specular_texture
     elif mapto == 'ALPHA':
@@ -254,13 +254,22 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         img_wrap = contextWrapper.emission_color_texture
     elif mapto == 'NORMAL':
         img_wrap = contextWrapper.normalmap_texture
+    elif mapto == 'TEXTURE':
+        img_wrap = node.new(type='ShaderNodeTexImage')
+        img_wrap.label = image.name
+        newWrap._grid_to_location(-1,2, dst_node=img_wrap, ref_node=shader)
+        for node in newWrap.material.node_tree.nodes:
+            if node.label == 'Mixer':
+                newWrap.material.node_tree.links.new(img_wrap.outputs['Color'], node.inputs['Color2'])
 
     img_wrap.image = image
-    img_wrap.scale = scale
-    img_wrap.translation = offset
-    img_wrap.rotation[2] = angle
     img_wrap.extension = 'REPEAT'
     
+    if mapto != 'TEXTURE':
+        img_wrap.scale = scale
+        img_wrap.translation = offset
+        img_wrap.rotation[2] = angle
+
     if extension == 'mirror':
         # 3DS mirror flag can be emulated by these settings (at least so it seems)
         # TODO: bring back mirror
@@ -273,7 +282,7 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
     elif extension == 'noWrap':
         img_wrap.extension = 'CLIP'
     if alphaflag == 'alpha':
-        img_wrap.owner_shader.material.node_tree.links.new(img_wrap.node_image.outputs['Alpha'], img_wrap.socket_dst)
+        links.new(img_wrap.node_image.outputs['Alpha'], img_wrap.socket_dst)
 
 
 def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEARCH):
@@ -412,7 +421,6 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
     def read_texture(new_chunk, temp_chunk, name, mapto):
         u_scale, v_scale, u_offset, v_offset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
         contextWrapper.use_nodes = True
-        mirror = False
         extension = 'wrap'
         alphaflag = False
         
@@ -560,25 +568,28 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
         elif new_chunk.ID == MAT_OPACITY_MAP:
             read_texture(new_chunk, temp_chunk, "Opacity", "ALPHA")
-            
+
         elif new_chunk.ID == MAT_REFLECTION_MAP:
             read_texture(new_chunk, temp_chunk, "Reflect", "METALLIC")
 
         elif new_chunk.ID == MAT_BUMP_MAP:
             read_texture(new_chunk, temp_chunk, "Bump", "NORMAL")
-            
+
         elif new_chunk.ID == MAT_BUMP_PERCENT:
             temp_data = file.read(SZ_U_SHORT)
             new_chunk.bytes_read += SZ_U_SHORT
             contextWrapper.normalmap_strength = (float(struct.unpack('<H', temp_data)[0]) / 100)
             new_chunk.bytes_read += temp_chunk.bytes_read
-            
+
         elif new_chunk.ID == MAT_SHIN_MAP:
             read_texture(new_chunk, temp_chunk, "Shininess", "ROUGHNESS")
 
         elif new_chunk.ID == MAT_SELFI_MAP:
             read_texture(new_chunk, temp_chunk, "Emit", "EMISSION")
-            
+
+        elif new_chunk.ID == MAT_TEX2_MAP:
+            read_texture(new_chunk, temp_chunk, "Tex", "TEXTURE")
+
         elif new_chunk.ID == MAT_SHINESS:
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
@@ -589,9 +600,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 temp_data = file.read(SZ_FLOAT)
                 temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.roughness = 1 - float(struct.unpack('f', temp_data)[0])
-                
+
             new_chunk.bytes_read += temp_chunk.bytes_read
-            
+
         elif new_chunk.ID == MAT_SHIN2:
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
@@ -602,9 +613,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 temp_data = file.read(SZ_FLOAT)
                 temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.specular_intensity = float(struct.unpack('f', temp_data)[0])
-                
+
             new_chunk.bytes_read += temp_chunk.bytes_read
-            
+
         elif new_chunk.ID == MAT_SHIN3:
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
@@ -615,7 +626,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 temp_data = file.read(SZ_FLOAT)
                 temp_chunk.bytes_read += SZ_FLOAT
                 contextMaterial.metallic = float(struct.unpack('f', temp_data)[0])
-                
+
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == MAT_TRANSPARENCY:
