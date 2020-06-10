@@ -232,6 +232,7 @@ def skip_to_end(file, skip_chunk):
 def add_texture_to_material(image, scale, offset, angle, extension, contextWrapper, alphaflag, mapto):
     shader = contextWrapper.node_principled_bsdf
     nodetree = contextWrapper.material.node_tree
+    shader.location = (-300,0)
     nodes = nodetree.nodes
     links = nodetree.links
 
@@ -239,26 +240,31 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         mixer = nodes.new(type='ShaderNodeMixRGB')
         mixer.label = "Mixer"
         mixer.inputs['Color1'].default_value = (0,0,0,0)  # may add tint color here
-        contextWrapper._grid_to_location(0,1, dst_node=mixer, ref_node=shader)
+        contextWrapper._grid_to_location(1,2, dst_node=mixer, ref_node=shader)
         img_wrap = contextWrapper.base_color_texture
         links.new(img_wrap.node_image.outputs['Color'], mixer.inputs[2])
         links.new(mixer.outputs["Color"], shader.inputs['Base Color'])
     elif mapto == 'SPECULARITY':
         img_wrap = contextWrapper.specular_texture
     elif mapto == 'ALPHA':
+        shader.location = (0,-300)
         img_wrap = contextWrapper.alpha_texture
     elif mapto == 'METALLIC':
+        shader.location = (300,300)
         img_wrap = contextWrapper.metallic_texture
     elif mapto == 'ROUGHNESS':
+        shader.location = (300,0)
         img_wrap = contextWrapper.roughness_texture
     elif mapto == 'EMISSION':
+        shader.location = (-300,-600)
         img_wrap = contextWrapper.emission_color_texture
     elif mapto == 'NORMAL':
+        shader.location = (300,300)
         img_wrap = contextWrapper.normalmap_texture
     elif mapto == 'TEXTURE':
         img_wrap = nodes.new(type='ShaderNodeTexImage')
         img_wrap.label = image.name
-        contextWrapper._grid_to_location(-1,2, dst_node=img_wrap, ref_node=shader)
+        contextWrapper._grid_to_location(0,2, dst_node=img_wrap, ref_node=shader)
         for node in nodes:
             if node.label == 'Mixer':
                 spare = node.inputs[1] if node.inputs[1].is_linked is False else node.inputs[2]
@@ -288,6 +294,9 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         img_wrap.extension = 'CLIP'
     if alphaflag == 'alpha':
         links.new(img_wrap.node_image.outputs['Alpha'], img_wrap.socket_dst)
+
+    shader.location = (300,300)
+    contextWrapper._grid_to_location(1,0, dst_node=contextWrapper.node_out, ref_node=shader)
 
 
 def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEARCH):
