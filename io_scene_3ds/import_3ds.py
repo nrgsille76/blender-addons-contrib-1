@@ -649,16 +649,15 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
-            temp_data = file.read(SZ_3FLOAT)
-            x, y, z = struct.unpack('<3f', temp_data)
-            new_chunk.bytes_read += SZ_3FLOAT
-
-            # no lamp in dict that would be confusing    ...why not? just set CreateBlenderObject to False
+            # no lamp in dict that would be confusing
+            # ...why not? just set CreateBlenderObject to False
             newLamp = bpy.data.lights.new(contextObName, 'POINT')
             contextLamp = bpy.data.objects.new("Light", newLamp)
             context.view_layer.active_layer_collection.collection.objects.link(newLamp)
             importedObjects.append(contextLamp)
-            contextLamp.location = x, y, z
+            temp_data = file.read(SZ_3FLOAT)
+            contextLamp.location = struct.unpack('<3f', temp_data)
+            new_chunk.bytes_read += SZ_3FLOAT
             CreateBlenderObject = False
             # Reset matrix
             contextMatrix = None
