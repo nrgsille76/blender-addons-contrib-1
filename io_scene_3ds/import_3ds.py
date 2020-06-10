@@ -261,8 +261,9 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         contextWrapper._grid_to_location(-1,2, dst_node=img_wrap, ref_node=shader)
         for node in nodes:
             if node.label == 'Mixer':
-                input = node.inputs[1] if node.inputs[1].is_linked is False else node.inputs[2]
-                links.new(img_wrap.outputs['Color'], input)
+                spare = node.inputs[1] if node.inputs[1].is_linked is False else node.inputs[2]
+                socket = spare if spare.is_linked is False else node.inputs[0]
+                links.new(img_wrap.outputs['Color'], socket)
         if shader.inputs['Base Color'].is_linked is False:
             links.new(img_wrap.outputs['Color'], shader.inputs['Base Color'])
 
