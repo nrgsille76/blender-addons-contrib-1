@@ -848,7 +848,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 rgb = struct.unpack('<3f', temp_data)
                 new_chunk.bytes_read += SZ_3FLOAT
                 if nframe == 0:
-                    child.scale = rgb
+                    child.data.color = rgb
 
         else:
             buffer_size = new_chunk.length - new_chunk.bytes_read
