@@ -434,7 +434,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]
 
     def read_texture(new_chunk, temp_chunk, name, mapto):
-        uscale, vscale, uoffset, _offset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
+        uscale, vscale, uoffset, voffset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
         contextWrapper.use_nodes = True
         tintcolor = None
         extend = 'wrap'
