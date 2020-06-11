@@ -83,8 +83,6 @@ MAT_MAP_VSCALE = 0xA356   # V axis scaling
 MAT_MAP_UOFFSET = 0xA358  # U axis offset
 MAT_MAP_VOFFSET = 0xA35A  # V axis offset
 MAT_MAP_ANG = 0xA35C      # UV rotation around the z-axis in rad
-
-#>------ Sub defines of MAP COLOR
 MAT_MAP_COL1 = 0xA360  # Map Color1
 MAT_MAP_COL2 = 0xA362  # Map Color2
 MAT_MAP_RCOL = 0xA364  # Red mapping
@@ -491,7 +489,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 angle = read_float(temp_chunk)
                 print("\nwarning: UV angle mapped to z-rotation")
 
-            elif temp_chunk.ID == MAP_COL1:
+            elif temp_chunk.ID == MAT_MAP_COL1:
                 tintcolor = read_byte_color(temp_chunk)
 
             skip_to_end(file, temp_chunk)
