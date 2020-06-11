@@ -229,7 +229,7 @@ def skip_to_end(file, skip_chunk):
     skip_chunk.bytes_read += buffer_size
 
 
-def add_texture_to_material(image, scale, offset, angle, extension, contextWrapper, alphaflag, mapto):
+def add_texture_to_material(image, contextWrapper, pct, extend, alpha, scale, offset, angle, tintcolor, mapto):
     shader = contextWrapper.node_principled_bsdf
     nodetree = contextWrapper.material.node_tree
     shader.location = (-300,0)
@@ -239,11 +239,12 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
     if mapto == 'COLOR':
         mixer = nodes.new(type='ShaderNodeMixRGB')
         mixer.label = "Mixer"
-        mixer.inputs['Color1'].default_value = (0,0,0,0)  # may add tint color here
+        mixer.inputs[0].default_value = pct/100
+        mixer.inputs[1].default_value = tintcolor[:3]+[1] if tintcolor else (0,0,0,0)
         contextWrapper._grid_to_location(1,2, dst_node=mixer, ref_node=shader)
         img_wrap = contextWrapper.base_color_texture
         links.new(img_wrap.node_image.outputs['Color'], mixer.inputs[2])
-        links.new(mixer.outputs["Color"], shader.inputs['Base Color'])
+        links.new(mixer.outputs['Color'], shader.inputs['Base Color'])
     elif mapto == 'SPECULARITY':
         img_wrap = contextWrapper.specular_texture
     elif mapto == 'ALPHA':
@@ -281,18 +282,18 @@ def add_texture_to_material(image, scale, offset, angle, extension, contextWrapp
         img_wrap.translation = offset
         img_wrap.rotation[2] = angle
 
-    if extension == 'mirror':
+    if extend == 'mirror':
         # 3DS mirror flag can be emulated by these settings (at least so it seems)
         # TODO: bring back mirror
         pass
         # texture.repeat_x = texture.repeat_y = 2
         # texture.use_mirror_x = texture.use_mirror_y = True
-    elif extension == 'decal':
+    elif extend == 'decal':
         # 3DS' decal mode maps best to Blenders EXTEND
         img_wrap.extension = 'EXTEND'
-    elif extension == 'noWrap':
+    elif extend == 'noWrap':
         img_wrap.extension = 'CLIP'
-    if alphaflag == 'alpha':
+    if alpha == 'alpha':
         links.new(img_wrap.node_image.outputs['Alpha'], img_wrap.socket_dst)
 
     shader.location = (300,300)
@@ -433,62 +434,67 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]
 
     def read_texture(new_chunk, temp_chunk, name, mapto):
-        u_scale, v_scale, u_offset, v_offset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
+        uscale, vscale, uoffset, _offset, angle = 1.0, 1.0, 0.0, 0.0, 0.0
         contextWrapper.use_nodes = True
-        extension = 'wrap'
-        alphaflag = False
+        tintcolor = None
+        extend = 'wrap'
+        alpha = False
+        pct = 0.5
         
         while (new_chunk.bytes_read < new_chunk.length):
             read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PCTI:
+                pct = read_short(temp_chunk)
 
-            if temp_chunk.ID == MAT_MAP_FILEPATH:
+            elif temp_chunk.ID == MAT_MAP_FILEPATH:
                 texture_name, read_str_len = read_string(file)
-
                 img = TEXTURE_DICT[contextMaterial.name] = load_image(texture_name, dirname, recursive=IMAGE_SEARCH)
                 temp_chunk.bytes_read += read_str_len  # plus one for the null character that gets removed
 
             elif temp_chunk.ID == MAT_MAP_USCALE:
-                u_scale = read_float(temp_chunk)
+                uscale = read_float(temp_chunk)
             elif temp_chunk.ID == MAT_MAP_VSCALE:
-                v_scale = read_float(temp_chunk)
-
+                vscale = read_float(temp_chunk)
             elif temp_chunk.ID == MAT_MAP_UOFFSET:
-                u_offset = read_float(temp_chunk)
+                uoffset = read_float(temp_chunk)
             elif temp_chunk.ID == MAT_MAP_VOFFSET:
-                v_offset = read_float(temp_chunk)
+                voffset = read_float(temp_chunk)
 
             elif temp_chunk.ID == MAT_MAP_TILING:
                 tiling = read_short(temp_chunk)
                 if tiling & 0x1:
-                    extension = 'decal'
+                    extend = 'decal'
                 elif tiling & 0x2:
-                    extension = 'mirror'
+                    extend = 'mirror'
                 elif tiling & 0x8:
-                    extension = 'invert'
+                    extend = 'invert'
                 elif tiling & 0x10:
-                    extension = 'noWrap'
+                    extend = 'noWrap'
                 elif tiling & 0x20:
-                    alphaflag = 'sat'
+                    alpha = 'sat'
                 elif tiling & 0x40:
-                    alphaflag = 'alpha'
+                    alpha = 'alpha'
                 elif tiling & 0x80:
-                    tintflag = 'tint'
+                    tint = 'tint'
                 elif tiling & 0x100:
-                    tintflag = 'noAlpha'
+                    tint = 'noAlpha'
                 elif tiling & 0x200:
-                    tintflag = 'RGBtint'
+                    tint = 'RGBtint'
 
             elif temp_chunk.ID == MAT_MAP_ANG:
                 angle = read_float(temp_chunk)
                 print("\nwarning: UV angle mapped to z-rotation")
+
+            elif temp_chunk.ID == MAP_COL1:
+                tintcolor = read_byte_color(temp_chunk)
 
             skip_to_end(file, temp_chunk)
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         # add the map to the material in the right channel
         if img:
-            add_texture_to_material(img, (u_scale, v_scale, 1),
-                                    (u_offset, v_offset, 0), angle, extension, contextWrapper, alphaflag, mapto)
+            add_texture_to_material(img, contextWrapper, extend, alpha, (uscale, vscale, 1),
+                                    (uoffset, voffset, 0), angle, tintcolor, mapto)
 
     dirname = os.path.dirname(file.name)
 
