@@ -1173,6 +1173,7 @@ def save(operator,
         objects = (ob for ob in scene.objects if not ob.hide_viewport)
     
     light_objects = [ob for ob in objects if ob.type == 'LIGHT']
+    camera_objects = [ob for ob in objects if ob.type == 'CAMERA']
 
     for ob in objects:
         # get derived objects
