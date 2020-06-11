@@ -443,7 +443,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         
         while (new_chunk.bytes_read < new_chunk.length):
             read_chunk(file, temp_chunk)
-            if temp_chunk.ID == PCTI:
+            if temp_chunk.ID == PERCENTAGE_SHORT:
                 pct = read_short(temp_chunk)
 
             elif temp_chunk.ID == MAT_MAP_FILEPATH:
