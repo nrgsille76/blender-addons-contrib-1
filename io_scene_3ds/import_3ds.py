@@ -84,6 +84,12 @@ MAT_MAP_UOFFSET = 0xA358  # U axis offset
 MAT_MAP_VOFFSET = 0xA35A  # V axis offset
 MAT_MAP_ANG = 0xA35C      # UV rotation around the z-axis in rad
 
+#>------ Sub defines of MAP COLOR
+MAT_MAP_COL1 = 0xA360  # Map Color1
+MAT_MAP_COL2 = 0xA362  # Map Color2
+MAT_MAP_RCOL = 0xA364  # Red mapping
+MAT_MAP_GCOL = 0xA366  # Green mapping
+MAT_MAP_BCOL = 0xA368  # Blue mapping
 MAT_FLOAT_COLOR = 0x0010  # color defined as 3 floats
 MAT_24BIT_COLOR = 0x0011  # color defined as 3 bytes
 
