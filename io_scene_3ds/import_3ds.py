@@ -26,6 +26,7 @@ import os
 import time
 import struct
 import bpy
+import math
 import mathutils
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 
