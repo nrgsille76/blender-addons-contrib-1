@@ -309,6 +309,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
     contextObName = None
     contextLamp = None
+    contextCamera = None
     contextMaterial = None
     contextWrapper = None
     contextMatrix = None
@@ -687,6 +688,28 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.data.color = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
+            
+        elif new_chunk.ID == OBJECT_CAMERA:  # Basic camera support
+            camera = bpy.data.cameras.new(contextObName)
+            contextCamera = bpy.data.objects.new("Cam", camera)
+            context.view_layer.active_layer_collection.collection.objects.link(contextCamera)
+            imported_objects.append(contextCamera)
+            temp_data = file.read(SZ_3FLOAT)
+            contextCamera.location = struct.unpack('<3f', temp_data)
+            new_chunk.bytes_read += SZ_3FLOAT
+            temp_data = file.read(SZ_3FLOAT)
+            target = struct.unpack('<3f', temp_data)  # may use this to calc camera pan and tilt
+            new_chunk.bytes_read += SZ_3FLOAT
+            temp_data = file.read(SZ_FLOAT)
+            contextCamera.rotation_euler[0] = math.radians(60)
+            contextCamera.rotation_euler[1] = struct.unpack('<f', temp_data)[0]
+            contextCamera.rotation_euler[2] = math.radians(-45)
+            new_chunk.bytes_read += SZ_FLOAT
+            temp_data = file.read(SZ_FLOAT)
+            contextCamera.data.lens = struct.unpack('<f', temp_data)[0]
+            new_chunk.bytes_read += SZ_FLOAT
+            contextMatrix = None  # Reset matrix
+            CreateBlenderObject = False
 
         elif new_chunk.ID == OBJECT_MESH:
             pass
