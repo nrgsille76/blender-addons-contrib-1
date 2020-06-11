@@ -59,6 +59,7 @@ MATSPECULAR = 0xA030  # Specular color of the object/material
 MATSHINESS = 0xA040  # Specular intensity of the object/material (percent)
 MATSHIN2 = 0xA041  # Reflection of the object/material (percent)
 MATSHIN3 = 0xA042  # metallic/mirror of the object/material (percent)
+MATTRANS = 0xA050  # Transparency value (100-OpacityValue) (percent)
 
 MAT_DIFFUSEMAP = 0xA200  # This is a header for a new diffuse texture
 MAT_SPECMAP = 0xA204  # head for specularity map
@@ -66,7 +67,7 @@ MAT_OPACMAP = 0xA210  # head for opacity map
 MAT_REFLMAP = 0xA220  # head for reflect map
 MAT_BUMPMAP = 0xA230  # head for normal map
 MAT_BUMP_PERCENT = 0xA252  # Normalmap strength (percent)
-MAT_TEXMAP = 0xA33A  # head for secondary texture
+MAT_TEX2MAP = 0xA33A  # head for secondary texture
 MAT_SHINMAP = 0xA33C  # head for roughness map
 MAT_SELFIMAP = 0xA33D  # head for emission map
 
@@ -85,20 +86,19 @@ MAP_RCOL = 0xA364  # Red tint
 MAP_GCOL = 0xA366  # Green tint
 MAP_BCOL = 0xA368  # Blue tint
 
-MATTRANS = 0xA050  # Transparency value (100-OpacityValue) (percent)
-PCT = 0x0030  # Percent chunk
-MASTERSCALE = 0x0100  # Master scale factor
 RGB = 0x0010  # RGB float
 RGB1 = 0x0011  # RGB Color1
 RGB2 = 0x0012  # RGB Color2
+PCT = 0x0030  # Percent chunk
+MASTERSCALE = 0x0100  # Master scale factor
 
 #>------ sub defines of OBJECT
 OBJECT_MESH = 0x4100  # This lets us know that we are reading a new object
-OBJECT_LIGHT = 0x4600  # This lets un know we are reading a light object
-OBJECT_CAMERA = 0x4700  # This lets un know we are reading a camera object
+OBJECT_LIGHT = 0x4600  # This lets us know we are reading a light object
+OBJECT_CAMERA = 0x4700  # This lets us know we are reading a camera object
 
 #>------ sub defines of CAMERA
-OBJECT_CAM_RANGES = 0x4720      # The camera range values
+OBJECT_CAM_RANGES = 0x4720  # The camera range values
 
 #>------ sub defines of OBJECT_MESH
 OBJECT_VERTICES = 0x4110  # The objects vertices
@@ -695,7 +695,7 @@ def make_material_chunk(material, image):
                 diffuse = [link.from_node.image] if not wrap.normalmap_texture else None
  
         if diffuse:
-            matmap = make_texture_chunk(MAT_TEXMAP, diffuse)
+            matmap = make_texture_chunk(MAT_TEX2MAP, diffuse)
             if matmap:
                 material_chunk.add_subchunk(matmap)
 
@@ -1237,7 +1237,7 @@ def save(operator,
         object_info.add_subchunk(make_material_chunk(ma_image[0], ma_image[1]))
 
     # Give all objects a unique ID and build a dictionary from object name to object id:
-    translation = {}  # Collect translation for tranformation matrix
+    translation = {}  # collect translation for transformation matrix
     #name_to_id = {}
     for ob, data, matrix in mesh_objects:
         translation[ob.name] = ob.location
@@ -1290,6 +1290,18 @@ def save(operator,
         color_chunk.add_variable("blue", _3ds_float(ob.data.color[2]))
         light_chunk.add_subchunk(color_chunk)
         object_chunk.add_subchunk(light_chunk)
+        object_info.add_subchunk(object_chunk)
+
+    # Create camera object chunks
+    for ob in camera_objects:
+        object_chunk = _3ds_chunk(OBJECT)
+        camera_chunk = _3ds_chunk(OBJECT_CAMERA)
+        object_chunk.add_variable("camera", _3ds_string(sane_name(ob.name)))
+        camera_chunk.add_variable("location", _3ds_point_3d(ob.location))
+        camera_chunk.add_variable("target", _3ds_point_3d((0.0, 0.0, 0.0)))
+        camera_chunk.add_variable("roll", _3ds_float(round(ob.rotation_euler[1],6)))
+        camera_chunk.add_variable("lens", _3ds_float(ob.data.lens))
+        object_chunk.add_subchunk(camera_chunk)
         object_info.add_subchunk(object_chunk)
 
     # Create chunks for all empties:
