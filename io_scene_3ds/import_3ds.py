@@ -493,7 +493,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
         # add the map to the material in the right channel
         if img:
-            add_texture_to_material(img, contextWrapper, extend, alpha, (uscale, vscale, 1),
+            add_texture_to_material(img, contextWrapper, pct, extend, alpha, (uscale, vscale, 1),
                                     (uoffset, voffset, 0), angle, tintcolor, mapto)
 
     dirname = os.path.dirname(file.name)
