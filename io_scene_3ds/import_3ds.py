@@ -701,8 +701,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_3FLOAT)
             cam = contextCamera.location
             target = struct.unpack('<3f', temp_data)  # triangulating camera angles
-            tilt = math.radians(90)+math.atan((cam[2]-target[2])/(cam[1]+target[1]))
-            pan = math.radians(-90)+math.atan((cam[1]+target[1])/(cam[0]+target[0]))
+            tilt = math.radians(90)+math.atan((cam[2]-target[2])/(cam[1]+target[1])) if (cam[1]+target[1]) > 0 else 0.0
+            pan = math.radians(-90)+math.atan((cam[1]+target[1])/(cam[0]+target[0])) if (cam[0]+target[0]) > 0 else 0.0
             new_chunk.bytes_read += SZ_3FLOAT
             temp_data = file.read(SZ_FLOAT)
             contextCamera.rotation_euler[0] = tilt
