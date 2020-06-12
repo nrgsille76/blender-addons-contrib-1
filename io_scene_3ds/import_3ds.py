@@ -276,6 +276,8 @@ def add_texture_to_material(image, contextWrapper, pct, extend, alpha, scale, of
                 spare = node.inputs[1] if node.inputs[1].is_linked is False else node.inputs[2]
                 socket = spare if spare.is_linked is False else node.inputs[0]
                 links.new(img_wrap.outputs['Color'], socket)
+            if node.type == 'TEX_COORD':
+                links.new(node.outputs['UV'], img_wrap.inputs['Vector'])
         if shader.inputs['Base Color'].is_linked is False:
             links.new(img_wrap.outputs['Color'], shader.inputs['Base Color'])
 
@@ -445,7 +447,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         tintcolor = None
         extend = 'wrap'
         alpha = False
-        pct = 0.5
+        pct = 50
         
         while (new_chunk.bytes_read < new_chunk.length):
             read_chunk(file, temp_chunk)
