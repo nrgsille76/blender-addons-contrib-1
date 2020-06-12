@@ -48,6 +48,7 @@ KFDATA = 0xB000  # This is the header for all of the key frame info
 #------ sub defines of OBJECTINFO
 OBJECTINFO = 0x3D3D  # Main mesh object chunk before the material and object information
 MESHVERSION = 0x3D3E  # This gives the version of the mesh
+AMBIENTLIGHT = 0x2100  # The color of the ambient light
 MATERIAL = 45055  # 0xAFFF // This stored the texture info
 OBJECT = 16384  # 0x4000 // This stores the faces, vertices, etc...
 
@@ -281,6 +282,23 @@ class _3ds_point_uv(object):
 
     def __str__(self):
         return '(%g, %g)' % self.uv
+
+    
+class _3ds_float_color(object):
+    """Class representing a rgb float color for a 3ds file."""
+    __slots__ = "r", "g", "b"
+
+    def __init__(self, col):
+        self.r, self.g, self.b = col
+
+    def get_size(self):
+        return 3 * SZ_FLOAT
+
+    def write(self, file):
+        file.write(struct.pack('3f', self.r, self.g, self.b))
+
+    def __str__(self):
+        return '{%f, %f, %f}' % (self.r, self.g, self.b)
 
 
 class _3ds_rgb_color(object):
@@ -635,8 +653,9 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
         if wrap.base_color_texture:
+            d_pct = sum(wrap.diffuse_color[:])/4
             color = [wrap.base_color_texture]
-            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, pct=1)
+            matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, d_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
 
@@ -681,8 +700,9 @@ def make_material_chunk(material, image):
                 material_chunk.add_subchunk(matmap)
 
         if wrap.emission_color_texture:
+            e_pct = sum(wrap.emission_color[:])/4
             emission = [wrap.emission_color_texture]
-            matmap = make_material_texture_chunk(MAT_SELFIMAP, emission, pct=1)
+            matmap = make_material_texture_chunk(MAT_SELFIMAP, emission, e_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
 
@@ -1152,6 +1172,13 @@ def save(operator,
     mscale = _3ds_chunk(MASTERSCALE)
     mscale.add_variable("scale", _3ds_float(1))
     object_info.add_subchunk(mscale)
+    
+    # Add AMBIENT color
+    ambient_chunk = _3ds_chunk(AMBIENTLIGHT)
+    ambient_light = _3ds_chunk(RGB)
+    ambient_light.add_variable("ambient", _3ds_float_color(sce.world.color))
+    ambient_chunk.add_subchunk(ambient_light)
+    object_info.add_subchunk(ambient_chunk)
 
     ''' # COMMENTED OUT FOR 2.42 RELEASE!! CRASHES 3DS MAX
     # init main key frame data chunk:
@@ -1286,9 +1313,7 @@ def save(operator,
         color_chunk = _3ds_chunk(RGB)
         object_chunk.add_variable("light", _3ds_string(sane_name(ob.name)))
         light_chunk.add_variable("location", _3ds_point_3d(ob.location))
-        color_chunk.add_variable("red", _3ds_float(ob.data.color[0]))
-        color_chunk.add_variable("green", _3ds_float(ob.data.color[1]))
-        color_chunk.add_variable("blue", _3ds_float(ob.data.color[2]))
+        color_chunk.add_variable("color", _3ds_float_color(ob.data.color))
         light_chunk.add_subchunk(color_chunk)
         object_chunk.add_subchunk(light_chunk)
         object_info.add_subchunk(object_chunk)
