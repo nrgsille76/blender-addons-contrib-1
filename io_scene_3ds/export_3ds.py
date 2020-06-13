@@ -1329,7 +1329,7 @@ def save(operator,
             hotspot = cone_angle-(ob.data.spot_blend*cone_angle/2)
             pos_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
             pos_y = ob.location[1]+(ob.location[2]*math.tan(ob.rotation_euler[0]))
-            pos_z = ob.location[2]+(ob.location[1]*math.tan(ob.rotation_euler[0]))
+            pos_z = ob.location[2]+(ob.location[1]/math.tan(ob.rotation_euler[0]))
             spotlight_chunk = _3ds_chunk(LIGHT_SPOTLIGHT)
             spot_roll_chunk = _3ds_chunk(LIGHT_SPOTROLL)
             spotlight_chunk.add_variable("target", _3ds_point_3d((pos_x, pos_y, pos_z)))
@@ -1349,7 +1349,7 @@ def save(operator,
         camera_chunk = _3ds_chunk(OBJECT_CAMERA)  # triangulating target
         focus_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
         focus_y = ob.location[1]+(ob.location[2]*math.tan(ob.rotation_euler[0]))
-        focus_z = ob.location[2]+(ob.location[1]*math.tan(ob.rotation_euler[0]))
+        focus_z = ob.location[2]+(ob.location[1]/math.tan(ob.rotation_euler[0]))
         object_chunk.add_variable("camera", _3ds_string(sane_name(ob.name)))
         camera_chunk.add_variable("location", _3ds_point_3d(ob.location))
         camera_chunk.add_variable("target", _3ds_point_3d((focus_x, focus_y, focus_z)))
