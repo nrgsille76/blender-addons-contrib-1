@@ -683,14 +683,39 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.location = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
+            contextMatrix = None  # Reset matrix
             CreateBlenderObject = False
-            # Reset matrix
-            contextMatrix = None
 
-        elif new_chunk.ID == RGB:
+        elif new_chunk.ID == RGB:  # color
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.data.color = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
+        elif new_chunk.ID == OBJECT_LIGHT_MULTIPLIER:  # intensity
+            temp_data = file.read(SZ_FLOAT)
+            contextLamp.data.energy = float(struct.unpack('f', temp_data)[0])
+            new_chunk.bytes_read += SZ_FLOAT
+            
+        elif new_chunk.ID == OBJECT_LIGHT_SPOT:  # spotlight
+            temp_data = file.read(SZ_3FLOAT)
+            contextLamp.data.type = 'SPOT'
+            tracker = contextLamp.location
+            spot = struct.unpack('<3f', temp_data)
+            spot_direction = tuple(map(sum, zip(tracker, spot)))  # target triangulation
+            contextLamp.rotation_euler[0] = -1*math.atan(spot_direction[1] / spot_direction[2])
+            contextLamp.rotation_euler[2] = -1*math.atan(spot_direction[0] / spot_direction[1])
+            new_chunk.bytes_read += SZ_3FLOAT
+            temp_data = file.read(SZ_FLOAT)  # hotspot
+            hotspot = float(struct.unpack('f', temp_data)[0])
+            new_chunk.bytes_read += SZ_FLOAT
+            temp_data = file.read(SZ_FLOAT)  # angle
+            beam_angle = float(struct.unpack('f', temp_data)[0])
+            contextLamp.data.spot_size = beam_angle
+            contextLamp.data.spot_blend = (1.0 - (hotspot/beam_angle))*2
+            new_chunk.bytes_read += SZ_FLOAT
+        elif new_chunk.ID == OBJECT_LIGHT_ROLL:  # roll
+            temp_data = file.read(SZ_FLOAT)
+            contextLamp.rotation_euler[1] = float(struct.unpack('f', temp_data)[0])
+            new_chunk.bytes_read += SZ_FLOAT
             
         elif new_chunk.ID == OBJECT_CAMERA:  # Basic camera support
             camera = bpy.data.cameras.new(contextObName)
@@ -703,15 +728,15 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_3FLOAT)
             cam = contextCamera.location
             target = struct.unpack('<3f', temp_data)
-            direction = tuple(map(sum, zip(cam[:3], target[:3])))
+            direction = tuple(map(sum, zip(cam, target)))
             new_chunk.bytes_read += SZ_3FLOAT
             temp_data = file.read(SZ_FLOAT)   # triangulating camera angles
             contextCamera.rotation_euler[0] = -1*math.atan(direction[1] / direction[2])
-            contextCamera.rotation_euler[1] = struct.unpack('<f', temp_data)[0]
+            contextCamera.rotation_euler[1] = float(struct.unpack('f', temp_data)[0])
             contextCamera.rotation_euler[2] = -1*math.atan(direction[0] / direction[1])
             new_chunk.bytes_read += SZ_FLOAT
             temp_data = file.read(SZ_FLOAT)
-            contextCamera.data.lens = struct.unpack('<f', temp_data)[0]
+            contextCamera.data.lens = float(struct.unpack('f', temp_data)[0])
             new_chunk.bytes_read += SZ_FLOAT
             contextMatrix = None  # Reset matrix
             CreateBlenderObject = False
