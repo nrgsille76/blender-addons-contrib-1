@@ -98,6 +98,11 @@ OBJECT_MESH = 0x4100  # This lets us know that we are reading a new object
 OBJECT_LIGHT = 0x4600  # This lets us know we are reading a light object
 OBJECT_CAMERA = 0x4700  # This lets us know we are reading a camera object
 
+#>------ Sub defines of LIGHT
+LIGHT_MULTIPLIER = 0x465B  # The light energy factor
+LIGHT_SPOTLIGHT = 0x4610  # The target of a spotlight
+LIGHT_SPOTROLL = 0x4656  # The roll angle of the spot
+
 #>------ sub defines of CAMERA
 OBJECT_CAM_RANGES = 0x4720  # The camera range values
 
@@ -653,7 +658,7 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
         if wrap.base_color_texture:
-            d_pct = sum(wrap.diffuse_color[:])/4
+            d_pct = sum(material.diffuse_color[:])*.25
             color = [wrap.base_color_texture]
             matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, d_pct)
             if matmap:
@@ -700,7 +705,7 @@ def make_material_chunk(material, image):
                 material_chunk.add_subchunk(matmap)
 
         if wrap.emission_color_texture:
-            e_pct = sum(wrap.emission_color[:])/4
+            e_pct = sum(wrap.emission_color[:])*.25
             emission = [wrap.emission_color_texture]
             matmap = make_material_texture_chunk(MAT_SELFIMAP, emission, e_pct)
             if matmap:
@@ -1310,11 +1315,31 @@ def save(operator,
     for ob in light_objects:
         object_chunk = _3ds_chunk(OBJECT)
         light_chunk = _3ds_chunk(OBJECT_LIGHT)
-        color_chunk = _3ds_chunk(RGB)
+        color_float_chunk = _3ds_chunk(RGB)
+        energy_factor = _3ds_chunk(LIGHT_MULTIPLIER)
         object_chunk.add_variable("light", _3ds_string(sane_name(ob.name)))
         light_chunk.add_variable("location", _3ds_point_3d(ob.location))
-        color_chunk.add_variable("color", _3ds_float_color(ob.data.color))
-        light_chunk.add_subchunk(color_chunk)
+        color_float_chunk.add_variable("color", _3ds_float_color(ob.data.color))
+        energy_factor.add_variable("energy", _3ds_float(ob.data.energy))
+        light_chunk.add_subchunk(color_float_chunk)
+        light_chunk.add_subchunk(energy_factor)
+
+        if ob.data.type == 'SPOT':
+            cone_angle = ob.data.spot_size
+            hotspot = cone_angle-(ob.data.spot_blend*cone_angle/2)
+            pos_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
+            pos_y = ob.location[1]+(ob.location[2]*math.tan(ob.rotation_euler[0]))
+            pos_z = ob.location[2]+(ob.location[1]*math.tan(ob.rotation_euler[0]))
+            spotlight_chunk = _3ds_chunk(LIGHT_SPOTLIGHT)
+            spot_roll_chunk = _3ds_chunk(LIGHT_SPOTROLL)
+            spotlight_chunk.add_variable("target", _3ds_point_3d((pos_x, pos_y, pos_z)))
+            spotlight_chunk.add_variable("hotspot", _3ds_float(round(hotspot,6)))
+            spotlight_chunk.add_variable("angle", _3ds_float(round(cone_angle,6)))
+            spot_roll_chunk.add_variable("roll", _3ds_float(round(ob.rotation_euler[1],6)))
+            spotlight_chunk.add_subchunk(spot_roll_chunk)
+            light_chunk.add_subchunk(spotlight_chunk)
+
+        # Add light to object info
         object_chunk.add_subchunk(light_chunk)
         object_info.add_subchunk(object_chunk)
 
