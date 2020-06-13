@@ -677,7 +677,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             # no lamp in dict that would be confusing
             # ...why not? just set CreateBlenderObject to False
             newLamp = bpy.data.lights.new(contextObName, 'POINT')
-            contextLamp = bpy.data.objects.new("Light", newLamp)
+            contextLamp = bpy.data.objects.new("Lamp", newLamp)
             context.view_layer.active_layer_collection.collection.objects.link(newLamp)
             importedObjects.append(contextLamp)
             temp_data = file.read(SZ_3FLOAT)
@@ -736,7 +736,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             contextCamera.rotation_euler[2] = -1*math.atan(direction[0] / direction[1])
             new_chunk.bytes_read += SZ_FLOAT
             temp_data = file.read(SZ_FLOAT)
-            contextCamera.data.lens = float(struct.unpack('f', temp_data)[0])
+            contextCamera.data.lens = (float(struct.unpack('f', temp_data)[0]) * 10)
             new_chunk.bytes_read += SZ_FLOAT
             contextMatrix = None  # Reset matrix
             CreateBlenderObject = False
