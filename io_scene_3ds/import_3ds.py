@@ -307,7 +307,7 @@ def add_texture_to_material(image, contextWrapper, pct, extend, alpha, scale, of
     contextWrapper._grid_to_location(1,0, dst_node=contextWrapper.node_out, ref_node=shader)
 
 
-def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEARCH):
+def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEARCH, KEYFRAME):
     from bpy_extras.image_utils import load_image
 
     contextObName = None
@@ -522,7 +522,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
         #is it an object info chunk?
         elif new_chunk.ID == OBJECTINFO:
-            process_next_chunk(context, file, new_chunk, importedObjects, IMAGE_SEARCH)
+            process_next_chunk(context, file, new_chunk, importedObjects, IMAGE_SEARCH, KEYFRAME)
 
             #keep track of how much we read in the main chunk
             new_chunk.bytes_read += temp_chunk.bytes_read
@@ -840,13 +840,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             object_dictionary[object_name] = child
             new_chunk.bytes_read += read_str_len
 
-        elif new_chunk.ID == EK_OB_PIVOT:  # translation
-                temp_data = file.read(SZ_3FLOAT)
-                pivot = struct.unpack('<3f', temp_data)
-                new_chunk.bytes_read += SZ_3FLOAT
-                pivot_list[len(pivot_list) - 1] = mathutils.Vector(pivot)
+        elif KEYFRAME and new_chunk.ID == EK_OB_PIVOT:  # pivot
+            temp_data = file.read(SZ_3FLOAT)
+            pivot = struct.unpack('<3f', temp_data)
+            new_chunk.bytes_read += SZ_3FLOAT
+            pivot_list[len(pivot_list) - 1] = mathutils.Vector(pivot)
 
-        elif new_chunk.ID == EK_OB_POSITION_TRACK:  # translation
+        elif KEYFRAME and new_chunk.ID == EK_OB_POSITION_TRACK:  # translation
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -865,7 +865,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 if nframe == 0:
                     child.location = loc
 
-        elif new_chunk.ID == EK_OB_ROTATION_TRACK and child.type == 'MESH':  # rotation
+        elif KEYFRAME and new_chunk.ID == EK_OB_ROTATION_TRACK and child.type == 'MESH':  # rotation
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -884,7 +884,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 if nframe == 0:
                     child.rotation_euler = mathutils.Quaternion((axis_x, axis_y, axis_z), -rad).to_euler()   # why negative?
 
-        elif new_chunk.ID == EK_OB_SCALE_TRACK and child.type == 'MESH':  # translation
+        elif KEYFRAME and new_chunk.ID == EK_OB_SCALE_TRACK and child.type == 'MESH':  # scale
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -903,7 +903,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 if nframe == 0:
                     child.scale = sca
 
-        elif new_chunk.ID == EK_OB_COLOR_TRACK and child.type == 'LIGHT':  # Color
+        elif KEYFRAME and new_chunk.ID == EK_OB_COLOR_TRACK and child.type == 'LIGHT':  # color
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -965,6 +965,7 @@ def load_3ds(filepath,
              context,
              IMPORT_CONSTRAIN_BOUNDS=10.0,
              IMAGE_SEARCH=True,
+             KEYFRAME=True,
              APPLY_MATRIX=True,
              global_matrix=None):
 #    global SCN
@@ -1007,7 +1008,7 @@ def load_3ds(filepath,
     scn = context.scene
 
     importedObjects = []  # Fill this list with objects
-    process_next_chunk(context, file, current_chunk, importedObjects, IMAGE_SEARCH)
+    process_next_chunk(context, file, current_chunk, importedObjects, IMAGE_SEARCH, KEYFRAME)
 
     # fixme, make unglobal
     object_dictionary.clear()
@@ -1099,6 +1100,7 @@ def load(operator,
          filepath="",
          constrain_size=0.0,
          use_image_search=True,
+         read_keyframe=True,
          use_apply_transform=True,
          global_matrix=None,
          ):
@@ -1107,6 +1109,7 @@ def load(operator,
              context,
              IMPORT_CONSTRAIN_BOUNDS=constrain_size,
              IMAGE_SEARCH=use_image_search,
+             KEYFRAME=read_keyframe,
              APPLY_MATRIX=use_apply_transform,
              global_matrix=global_matrix,
              )
