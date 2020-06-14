@@ -840,7 +840,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             object_dictionary[object_name] = child
             new_chunk.bytes_read += read_str_len
 
-        elif KEYFRAME and new_chunk.ID == EK_OB_PIVOT:  # pivot
+        elif new_chunk.ID == EK_OB_PIVOT:  # pivot
             temp_data = file.read(SZ_3FLOAT)
             pivot = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
