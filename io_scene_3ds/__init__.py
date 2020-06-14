@@ -86,6 +86,12 @@ class Import3DS(bpy.types.Operator, ImportHelper):
             default=True,
             )
 
+    read_keyframe: bpy.props.BoolProperty(
+            name="Read Keyframe",
+            description="Read the keyframe data",
+            default=True,
+            )
+
     def execute(self, context):
         from . import import_3ds
 
