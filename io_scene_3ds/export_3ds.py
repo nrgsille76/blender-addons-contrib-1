@@ -1320,21 +1320,22 @@ def save(operator,
         object_chunk.add_variable("light", _3ds_string(sane_name(ob.name)))
         light_chunk.add_variable("location", _3ds_point_3d(ob.location))
         color_float_chunk.add_variable("color", _3ds_float_color(ob.data.color))
-        energy_factor.add_variable("energy", _3ds_float(ob.data.energy))
+        energy_factor.add_variable("energy", _3ds_float(ob.data.energy*.001))
         light_chunk.add_subchunk(color_float_chunk)
         light_chunk.add_subchunk(energy_factor)
 
         if ob.data.type == 'SPOT':
             cone_angle = ob.data.spot_size
-            hotspot = cone_angle-(ob.data.spot_blend*cone_angle/2)
-            pos_x = -ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
-            pos_y = -ob.location[1]+(ob.location[2]*math.tan(ob.rotation_euler[0]))
-            pos_z = -ob.location[2]+(ob.location[1]/math.tan(ob.rotation_euler[0]))
+            hotspot = cone_angle-(ob.data.spot_blend*cone_angle)
+            hypo = pow(ob.location[0],2)+pow(ob.location[1],2) # triangulating target
+            pos_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
+            pos_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
+            pos_z = ob.location[2]+math.sqrt(hypo)*math.tan(-ob.rotation_euler[0])
             spotlight_chunk = _3ds_chunk(LIGHT_SPOTLIGHT)
             spot_roll_chunk = _3ds_chunk(LIGHT_SPOTROLL)
             spotlight_chunk.add_variable("target", _3ds_point_3d((pos_x, pos_y, pos_z)))
-            spotlight_chunk.add_variable("hotspot", _3ds_float(round(hotspot,6)))
-            spotlight_chunk.add_variable("angle", _3ds_float(round(cone_angle,6)))
+            spotlight_chunk.add_variable("hotspot", _3ds_float(math.degrees(hotspot)))
+            spotlight_chunk.add_variable("angle", _3ds_float(math.degrees(cone_angle)))
             spot_roll_chunk.add_variable("roll", _3ds_float(round(ob.rotation_euler[1],6)))
             spotlight_chunk.add_subchunk(spot_roll_chunk)
             light_chunk.add_subchunk(spotlight_chunk)
@@ -1346,15 +1347,16 @@ def save(operator,
     # Create camera object chunks
     for ob in camera_objects:
         object_chunk = _3ds_chunk(OBJECT)
-        camera_chunk = _3ds_chunk(OBJECT_CAMERA)  # triangulating target
-        focus_x = -ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
-        focus_y = -ob.location[1]+(ob.location[2]*math.tan(ob.rotation_euler[0]))
-        focus_z = -ob.location[2]+(ob.location[1]/math.tan(ob.rotation_euler[0]))
+        camera_chunk = _3ds_chunk(OBJECT_CAMERA)
+        hypo = pow(ob.location[0],2)+pow(ob.location[1],2)  # triangulating target
+        focus_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
+        focus_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
+        focus_z = ob.location[2]+math.sqrt(hypo)/math.tan(-ob.rotation_euler[0])
         object_chunk.add_variable("camera", _3ds_string(sane_name(ob.name)))
         camera_chunk.add_variable("location", _3ds_point_3d(ob.location))
         camera_chunk.add_variable("target", _3ds_point_3d((focus_x, focus_y, focus_z)))
         camera_chunk.add_variable("roll", _3ds_float(round(ob.rotation_euler[1],6)))
-        camera_chunk.add_variable("lens", _3ds_float(ob.data.lens / 10))
+        camera_chunk.add_variable("lens", _3ds_float(ob.data.lens*.1))
         object_chunk.add_subchunk(camera_chunk)
         object_info.add_subchunk(object_chunk)
 
