@@ -19,7 +19,7 @@
 # <pep8 compliant>
 
 # Script copyright (C) Bob Holcomb
-# Contributors: Bob Holcomb, Richard L?rk?ng, Damien McGinnes,
+# Contributors: Bob Holcomb, Richard L?rk?ng, Damien McGinnes, Sebastian Sille
 # Campbell Barton, Mario Lapin, Dominique Lorre, Andreas Atteneder
 
 import os
