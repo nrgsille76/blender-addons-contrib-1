@@ -710,7 +710,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += SZ_FLOAT
             temp_data = file.read(SZ_FLOAT)  # angle
             beam_angle = float(struct.unpack('f', temp_data)[0])
-            contextLamp.data.spot_size = beam_angle
+            contextLamp.data.spot_size = math.radians(beam_angle)
             contextLamp.data.spot_blend = (1.0 - (hotspot/beam_angle))*2
             new_chunk.bytes_read += SZ_FLOAT
         elif new_chunk.ID == OBJECT_LIGHT_ROLL:  # roll
