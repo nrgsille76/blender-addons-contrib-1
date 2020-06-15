@@ -1325,8 +1325,8 @@ def save(operator,
         light_chunk.add_subchunk(energy_factor)
 
         if ob.data.type == 'SPOT':
-            cone_angle = ob.data.spot_size
-            hotspot = cone_angle-(ob.data.spot_blend*cone_angle)
+            cone_angle = math.degrees(ob.data.spot_size)
+            hotspot = cone_angle-(ob.data.spot_blend*math.floor(cone_angle))
             hypo = pow(ob.location[0],2)+pow(ob.location[1],2) # triangulating target
             pos_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
             pos_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
@@ -1334,8 +1334,8 @@ def save(operator,
             spotlight_chunk = _3ds_chunk(LIGHT_SPOTLIGHT)
             spot_roll_chunk = _3ds_chunk(LIGHT_SPOTROLL)
             spotlight_chunk.add_variable("target", _3ds_point_3d((pos_x, pos_y, pos_z)))
-            spotlight_chunk.add_variable("hotspot", _3ds_float(math.degrees(hotspot)))
-            spotlight_chunk.add_variable("angle", _3ds_float(math.degrees(cone_angle)))
+            spotlight_chunk.add_variable("hotspot", _3ds_float(round(hotspot,4)))
+            spotlight_chunk.add_variable("angle", _3ds_float(round(cone_angle,4)))
             spot_roll_chunk.add_variable("roll", _3ds_float(round(ob.rotation_euler[1],6)))
             spotlight_chunk.add_subchunk(spot_roll_chunk)
             light_chunk.add_subchunk(spotlight_chunk)
@@ -1356,7 +1356,7 @@ def save(operator,
         camera_chunk.add_variable("location", _3ds_point_3d(ob.location))
         camera_chunk.add_variable("target", _3ds_point_3d((focus_x, focus_y, focus_z)))
         camera_chunk.add_variable("roll", _3ds_float(round(ob.rotation_euler[1],6)))
-        camera_chunk.add_variable("lens", _3ds_float(ob.data.lens*.1))
+        camera_chunk.add_variable("lens", _3ds_float(ob.data.lens))
         object_chunk.add_subchunk(camera_chunk)
         object_info.add_subchunk(object_chunk)
 
