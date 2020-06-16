@@ -1244,7 +1244,7 @@ def save(operator,
                             ma = ma_ls[ma_index]
                             ma_name = None if ma is None else ma.name
                         # else there already set to none
-                        
+
                         img = get_uv_image(ma)
                         img_name = None if img is None else img.name
 
