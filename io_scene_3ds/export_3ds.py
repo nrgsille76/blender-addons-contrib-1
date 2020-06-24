@@ -1179,11 +1179,12 @@ def save(operator,
     object_info.add_subchunk(mscale)
     
     # Add AMBIENT color
-    ambient_chunk = _3ds_chunk(AMBIENTLIGHT)
-    ambient_light = _3ds_chunk(RGB)
-    ambient_light.add_variable("ambient", _3ds_float_color(sce.world.color))
-    ambient_chunk.add_subchunk(ambient_light)
-    object_info.add_subchunk(ambient_chunk)
+    if sce.world is not None:
+        ambient_chunk = _3ds_chunk(AMBIENTLIGHT)
+        ambient_light = _3ds_chunk(RGB)
+        ambient_light.add_variable("ambient", _3ds_float_color(sce.world.color))
+        ambient_chunk.add_subchunk(ambient_light)
+        object_info.add_subchunk(ambient_chunk)
 
     ''' # COMMENTED OUT FOR 2.42 RELEASE!! CRASHES 3DS MAX
     # init main key frame data chunk:
