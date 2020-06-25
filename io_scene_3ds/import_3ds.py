@@ -812,7 +812,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             context.scene.frame_end = stop
 
         # including these here means their EK_OB_NODE_HEADER are scanned
-        elif new_chunk.ID in {KFDATA_AMBIENT, ED_KEY_OBJECT_NODE, KFDATA_CAMERA, KFDATA_TARGET, KFDATA_LIGHT}:  # another object is being processed
+        elif new_chunk.ID in {KFDATA_AMBIENT, KFDATA_OBJECT, KFDATA_CAMERA, KFDATA_TARGET, KFDATA_LIGHT}:  # another object is being processed
             child = None
 
         elif new_chunk.ID in {EK_OB_NODE_HEADER, KFDATA_LIGHT}:
