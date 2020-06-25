@@ -559,8 +559,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_AMBIENT:
             read_chunk(file, temp_chunk)
             # only available color is emission color
-               if temp_chunk.ID == MAT_FLOAT_COLOR:
-               contextMaterial.line_color[:3] = read_float_color(temp_chunk)
+            if temp_chunk.ID == MAT_FLOAT_COLOR:
+                contextMaterial.line_color[:3] = read_float_color(temp_chunk)
             elif temp_chunk.ID == MAT_24BIT_COLOR:
                 contextMaterial.line_color[:3] = read_byte_color(temp_chunk)
             else:
