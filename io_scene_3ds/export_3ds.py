@@ -1179,10 +1179,10 @@ def save(operator,
     object_info.add_subchunk(mscale)
     
     # Add AMBIENT color
-    if sce.world is not None:
+    if scene.world is not None:
         ambient_chunk = _3ds_chunk(AMBIENTLIGHT)
         ambient_light = _3ds_chunk(RGB)
-        ambient_light.add_variable("ambient", _3ds_float_color(sce.world.color))
+        ambient_light.add_variable("ambient", _3ds_float_color(scene.world.color))
         ambient_chunk.add_subchunk(ambient_light)
         object_info.add_subchunk(ambient_chunk)
 
