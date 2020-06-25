@@ -1160,6 +1160,10 @@ def save(operator,
     if bpy.ops.object.mode_set.poll():
         bpy.ops.object.mode_set(mode='OBJECT')
 
+    scene = context.scene
+    layer = context.view_layer
+    #depsgraph = context.evaluated_depsgraph_get()
+
     # Initialize the main chunk (primary):
     primary = _3ds_chunk(PRIMARY)
     # Add version chunk:
@@ -1195,10 +1199,6 @@ def save(operator,
     # each material is added once):
     materialDict = {}
     mesh_objects = []
-
-    scene = context.scene
-    layer = context.view_layer
-    #depsgraph = context.evaluated_depsgraph_get()
 
     if use_selection:
         objects = (ob for ob in scene.objects if not ob.hide_viewport and ob.select_get(view_layer=layer))
