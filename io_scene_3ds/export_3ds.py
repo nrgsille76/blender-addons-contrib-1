@@ -775,9 +775,9 @@ def extract_triangles(mesh):
         if do_uv:
             f_uv = [uf[lp].uv for lp in face.loops]
             for ma in mesh.materials:
-            img = get_uv_image(ma) if uf else None
-            if img is not None:
-                img = img.name
+                img = get_uv_image(ma) if uf else None
+                if img is not None:
+                    img = img.name
 
         smoothgroup = polygroup[face.polygon_index]
 
