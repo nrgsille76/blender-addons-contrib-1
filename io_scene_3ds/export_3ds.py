@@ -1201,9 +1201,9 @@ def save(operator,
     mesh_objects = []
 
     if use_selection:
-        objects = (ob for ob in scene.objects if not ob.hide_viewport and ob.select_get(view_layer=layer))
+        objects = [ob for ob in scene.objects if not ob.hide_viewport and ob.select_get(view_layer=layer)]
     else:
-        objects = (ob for ob in scene.objects if not ob.hide_viewport)
+        objects = [ob for ob in scene.objects if not ob.hide_viewport]
     
     light_objects = [ob for ob in objects if ob.type == 'LIGHT']
     camera_objects = [ob for ob in objects if ob.type == 'CAMERA']
