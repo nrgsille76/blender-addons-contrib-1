@@ -449,6 +449,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         alpha = False
         pct = 50
         
+        contextWrapper.emission_color = newMaterial.line_color[:3]
+        contextWrapper.base_color = newMaterial.diffuse_color[:3]
+        contextWrapper.specular = newMaterial.specular_intensity
+        contextWrapper.roughness = newMaterial.roughness
+        contextWrapper.metallic = newMaterial.metallic
+        contextWrapper.alpha = newMaterial.diffuse_color[3]
+        
         while (new_chunk.bytes_read < new_chunk.length):
             read_chunk(file, temp_chunk)
             if temp_chunk.ID == PERCENTAGE_SHORT:
@@ -588,6 +595,56 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 skip_to_end(file, temp_chunk)
             new_chunk.bytes_read += temp_chunk.bytes_read
 
+        elif new_chunk.ID == MAT_SHINESS:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
+                contextMaterial.roughness = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
+                contextMaterial.roughness = 1 - float(struct.unpack('f', temp_data)[0])
+            new_chunk.bytes_read += temp_chunk.bytes_read
+
+        elif new_chunk.ID == MAT_SHIN2:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
+                contextMaterial.specular_intensity = (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
+                contextMaterial.specular_intensity = float(struct.unpack('f', temp_data)[0])
+            new_chunk.bytes_read += temp_chunk.bytes_read
+
+        elif new_chunk.ID == MAT_SHIN3:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
+                contextMaterial.metallic = (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
+                contextMaterial.metallic = float(struct.unpack('f', temp_data)[0])
+            new_chunk.bytes_read += temp_chunk.bytes_read
+
+        elif new_chunk.ID == MAT_TRANSPARENCY:
+            read_chunk(file, temp_chunk)
+            if temp_chunk.ID == PERCENTAGE_SHORT:
+                temp_data = file.read(SZ_U_SHORT)
+                temp_chunk.bytes_read += SZ_U_SHORT
+                contextMaterial.diffuse_color[3] = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
+            elif temp_chunk.ID == PERCENTAGE_FLOAT:
+                temp_data = file.read(SZ_FLOAT)
+                temp_chunk.bytes_read += SZ_FLOAT
+                contextMaterial.diffuse_color[3] = 1 - float(struct.unpack('f', temp_data)[0])
+            else:
+                print( "Cannot read material transparency")
+            new_chunk.bytes_read += temp_chunk.bytes_read
+
         elif new_chunk.ID == MAT_TEXTURE_MAP:
             read_texture(new_chunk, temp_chunk, "Diffuse", "COLOR")
 
@@ -618,60 +675,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_TEX2_MAP:
             read_texture(new_chunk, temp_chunk, "Tex", "TEXTURE")
 
-        elif new_chunk.ID == MAT_SHINESS:
-            read_chunk(file, temp_chunk)
-            if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(SZ_U_SHORT)
-                temp_chunk.bytes_read += SZ_U_SHORT
-                contextMaterial.roughness = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
-            elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(SZ_FLOAT)
-                temp_chunk.bytes_read += SZ_FLOAT
-                contextMaterial.roughness = 1 - float(struct.unpack('f', temp_data)[0])
 
-            new_chunk.bytes_read += temp_chunk.bytes_read
-
-        elif new_chunk.ID == MAT_SHIN2:
-            read_chunk(file, temp_chunk)
-            if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(SZ_U_SHORT)
-                temp_chunk.bytes_read += SZ_U_SHORT
-                contextMaterial.specular_intensity = (float(struct.unpack('<H', temp_data)[0]) / 100)
-            elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(SZ_FLOAT)
-                temp_chunk.bytes_read += SZ_FLOAT
-                contextMaterial.specular_intensity = float(struct.unpack('f', temp_data)[0])
-
-            new_chunk.bytes_read += temp_chunk.bytes_read
-
-        elif new_chunk.ID == MAT_SHIN3:
-            read_chunk(file, temp_chunk)
-            if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(SZ_U_SHORT)
-                temp_chunk.bytes_read += SZ_U_SHORT
-                contextMaterial.metallic = (float(struct.unpack('<H', temp_data)[0]) / 100)
-            elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(SZ_FLOAT)
-                temp_chunk.bytes_read += SZ_FLOAT
-                contextMaterial.metallic = float(struct.unpack('f', temp_data)[0])
-
-            new_chunk.bytes_read += temp_chunk.bytes_read
-
-        elif new_chunk.ID == MAT_TRANSPARENCY:
-            read_chunk(file, temp_chunk)
-
-            if temp_chunk.ID == PERCENTAGE_SHORT:
-                temp_data = file.read(SZ_U_SHORT)
-                temp_chunk.bytes_read += SZ_U_SHORT
-                contextMaterial.diffuse_color[3] = 1 - (float(struct.unpack('<H', temp_data)[0]) / 100)
-            elif temp_chunk.ID == PERCENTAGE_FLOAT:
-                temp_data = file.read(SZ_FLOAT)
-                temp_chunk.bytes_read += SZ_FLOAT
-                contextMaterial.diffuse_color[3] = 1 - float(struct.unpack('f', temp_data)[0])
-            else:
-                print( "Cannot read material transparency")
-
-            new_chunk.bytes_read += temp_chunk.bytes_read
 
         elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
             # no lamp in dict that would be confusing
