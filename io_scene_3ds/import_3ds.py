@@ -449,12 +449,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         alpha = False
         pct = 50
         
-        contextWrapper.emission_color = newMaterial.line_color[:3]
-        contextWrapper.base_color = newMaterial.diffuse_color[:3]
-        contextWrapper.specular = newMaterial.specular_intensity
-        contextWrapper.roughness = newMaterial.roughness
-        contextWrapper.metallic = newMaterial.metallic
-        contextWrapper.alpha = newMaterial.diffuse_color[3]
+        contextWrapper.emission_color = contextMaterial.line_color[:3]
+        contextWrapper.base_color = contextMaterial.diffuse_color[:3]
+        contextWrapper.specular = contextMaterial.specular_intensity
+        contextWrapper.roughness = contextMaterial.roughness
+        contextWrapper.metallic = contextMaterial.metallic
+        contextWrapper.alpha = contextMaterial.diffuse_color[3]
         
         while (new_chunk.bytes_read < new_chunk.length):
             read_chunk(file, temp_chunk)
