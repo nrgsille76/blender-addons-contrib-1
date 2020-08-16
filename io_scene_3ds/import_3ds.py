@@ -420,6 +420,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
     temp_chunk = Chunk()
 
     CreateBlenderObject = False
+    CreateLightObject = False
 
     def read_float_color(temp_chunk):
         temp_data = file.read(SZ_3FLOAT)
@@ -675,8 +676,6 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_TEX2_MAP:
             read_texture(new_chunk, temp_chunk, "Tex", "TEXTURE")
 
-
-
         elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
             # no lamp in dict that would be confusing
             # ...why not? just set CreateBlenderObject to False
@@ -689,17 +688,18 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += SZ_3FLOAT
             contextMatrix = None  # Reset matrix
             CreateBlenderObject = False
+            CreateLightObject = True
 
-        elif new_chunk.ID == RGB:  # color
+        elif CreateLightObject and new_chunk.ID == MAT_FLOAT_COLOR:  # color
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.data.color = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
-        elif new_chunk.ID == OBJECT_LIGHT_MULTIPLIER:  # intensity
+        elif CreateLightObject and new_chunk.ID == OBJECT_LIGHT_MULTIPLIER:  # intensity
             temp_data = file.read(SZ_FLOAT)
             contextLamp.data.energy = float(struct.unpack('f', temp_data)[0])
             new_chunk.bytes_read += SZ_FLOAT
             
-        elif new_chunk.ID == OBJECT_LIGHT_SPOT:  # spotlight
+        elif CreateLightObject and new_chunk.ID == OBJECT_LIGHT_SPOT:  # spotlight
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.data.type = 'SPOT'
             lamp = contextLamp.location
@@ -717,7 +717,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             contextLamp.data.spot_size = math.radians(beam_angle)
             contextLamp.data.spot_blend = (1.0 - (hotspot/beam_angle))*2
             new_chunk.bytes_read += SZ_FLOAT
-        elif new_chunk.ID == OBJECT_LIGHT_ROLL:  # roll
+        elif CreateLightObject and new_chunk.ID == OBJECT_LIGHT_ROLL:  # roll
             temp_data = file.read(SZ_FLOAT)
             contextLamp.rotation_euler[1] = float(struct.unpack('f', temp_data)[0])
             new_chunk.bytes_read += SZ_FLOAT
