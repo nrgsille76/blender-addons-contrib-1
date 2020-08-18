@@ -653,6 +653,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             read_texture(new_chunk, temp_chunk, "Specular", "SPECULARITY")
 
         elif new_chunk.ID == MAT_OPACITY_MAP:
+            contextMaterial.blend_method = 'BLEND'
             read_texture(new_chunk, temp_chunk, "Opacity", "ALPHA")
 
         elif new_chunk.ID == MAT_REFLECTION_MAP:
