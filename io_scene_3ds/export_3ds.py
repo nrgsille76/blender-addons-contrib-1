@@ -653,7 +653,7 @@ def make_material_chunk(material, image):
     elif material and material.use_nodes:
         wrap = node_shader_utils.PrincipledBSDFWrapper(material)
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
-        material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
+        material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.roughness))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.specular))
