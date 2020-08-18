@@ -661,7 +661,7 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         
         if wrap.base_color_texture:
-            d_pct = sum(material.diffuse_color[:])*.25
+            d_pct = sum(wrap.base_color[:])*.25
             color = [wrap.base_color_texture]
             matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, d_pct)
             if matmap:
