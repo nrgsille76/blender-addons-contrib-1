@@ -418,7 +418,6 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 smoothface = myContextMesh_smooth[f]
                 if smoothface > 0:
                     bmesh.polygons[f].use_smooth = True
-                else: bmesh.polygons[f].use_smooth = False
 
         if contextMatrix:
             ob.matrix_local = contextMatrix
@@ -798,7 +797,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = file.read(SZ_U_INT * num_faces)
             smoothgroup = struct.unpack('<%dI' % (num_faces), temp_data)
             new_chunk.bytes_read += SZ_U_INT * num_faces
-            newMesh_smooth = smoothgroup
+            contextMesh_smooth = smoothgroup
 
         elif new_chunk.ID == OBJECT_UV:
             temp_data = file.read(SZ_U_SHORT)
@@ -848,7 +847,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += 2
             child = object_dictionary.get(object_name)
 
-            if child is None and CreateLightObject is False:
+            if child is None:
                 child = bpy.data.objects.new(object_name, None)  # create an empty object
                 context.view_layer.active_layer_collection.collection.objects.link(child)
                 importedObjects.append(child)
