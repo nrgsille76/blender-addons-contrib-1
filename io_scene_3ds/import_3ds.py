@@ -126,6 +126,7 @@ OBJECT_VERTICES = 0x4110  # The objects vertices
 OBJECT_FACES = 0x4120  # The objects faces
 OBJECT_MATERIAL = 0x4130  # This is found if the object has a material, either texture map or color
 OBJECT_UV = 0x4140  # The UV texture coordinates
+OBJECT_SMOOTH = 0x4150  # The Object smooth groups
 OBJECT_TRANS_MATRIX = 0x4160  # The Object Matrix
 
 #>------ sub defines of EDITKEYFRAME
@@ -319,6 +320,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
     contextMesh_vertls = None
     contextMesh_facels = None
     contextMeshMaterials = []
+    contextMesh_smooth = None
     contextMeshUV = None
 
     TEXTURE_DICT = {}
@@ -337,7 +339,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
     object_parent = []  # index of parent in hierarchy, 0xFFFF = no parent
     pivot_list = []  # pivots with hierarchy handling
 
-    def putContextMesh(context, myContextMesh_vertls, myContextMesh_facels, myContextMeshMaterials):
+    def putContextMesh(context, myContextMesh_vertls, myContextMesh_facels, myContextMeshMaterials, myContextMeshSmooth):
         bmesh = bpy.data.meshes.new(contextObName)
 
         if myContextMesh_facels is None:
@@ -411,6 +413,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         context.view_layer.active_layer_collection.collection.objects.link(ob)
         importedObjects.append(ob)
 
+        if myContextMesh_smooth:
+            for f, pl in enumerate(bmesh.polygons):
+                smoothface = myContextMesh_smooth[f]
+                if smoothface > 0:
+                    bmesh.polygons[f].use_smooth = True
+                else: bmesh.polygons[f].use_smooth = False
+
         if contextMatrix:
             ob.matrix_local = contextMatrix
             object_matrix[ob] = contextMatrix.copy()
@@ -421,6 +430,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
 
     CreateBlenderObject = False
     CreateLightObject = False
+    CreateCameraObject = False
 
     def read_float_color(temp_chunk):
         temp_data = file.read(SZ_3FLOAT)
@@ -539,10 +549,11 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == OBJECT:
 
             if CreateBlenderObject:
-                putContextMesh(context, contextMesh_vertls, contextMesh_facels, contextMeshMaterials)
+                putContextMesh(context, contextMesh_vertls, contextMesh_facels, contextMeshMaterials, contextMesh_smooth)
                 contextMesh_vertls = []
                 contextMesh_facels = []
                 contextMeshMaterials = []
+                contextMesh_smooth = None
                 contextMeshUV = None
                 # Reset matrix
                 contextMatrix = None
@@ -677,7 +688,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID == MAT_TEX2_MAP:
             read_texture(new_chunk, temp_chunk, "Tex", "TEXTURE")
 
-        elif new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
+        elif contextObName and new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
             # no lamp in dict that would be confusing
             # ...why not? just set CreateBlenderObject to False
             newLamp = bpy.data.lights.new(contextObName, 'POINT')
@@ -723,7 +734,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             contextLamp.rotation_euler[1] = float(struct.unpack('f', temp_data)[0])
             new_chunk.bytes_read += SZ_FLOAT
             
-        elif new_chunk.ID == OBJECT_CAMERA:  # Basic camera support
+        elif contextObName and new_chunk.ID == OBJECT_CAMERA and CreateCameraObject is False:  # Basic camera support
             camera = bpy.data.cameras.new(contextObName)
             contextCamera = bpy.data.objects.new("Cam", camera)
             context.view_layer.active_layer_collection.collection.objects.link(contextCamera)
@@ -747,6 +758,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += SZ_FLOAT
             contextMatrix = None  # Reset matrix
             CreateBlenderObject = False
+            CreateCameraObject = True
 
         elif new_chunk.ID == OBJECT_MESH:
             pass
@@ -781,6 +793,12 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             temp_data = struct.unpack("<%dH" % (num_faces_using_mat), temp_data)
             contextMeshMaterials.append((material_name, temp_data))
             #look up the material in all the materials
+
+        elif new_chunk.ID == OBJECT_SMOOTH:
+            temp_data = file.read(SZ_U_INT * num_faces)
+            smoothgroup = struct.unpack('<%dI' % (num_faces), temp_data)
+            new_chunk.bytes_read += SZ_U_INT * num_faces
+            newMesh_smooth = smoothgroup
 
         elif new_chunk.ID == OBJECT_UV:
             temp_data = file.read(SZ_U_SHORT)
@@ -941,7 +959,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
     # FINISHED LOOP
     # There will be a number of objects still not added
     if CreateBlenderObject:
-        putContextMesh(context, contextMesh_vertls, contextMesh_facels, contextMeshMaterials)
+        putContextMesh(context, contextMesh_vertls, contextMesh_facels, contextMeshMaterials, contextMesh_smooth)
 
     # Assign parents to objects
     # check _if_ we need to assign first because doing so recalcs the depsgraph
