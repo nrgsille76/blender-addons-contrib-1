@@ -794,9 +794,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             #look up the material in all the materials
 
         elif new_chunk.ID == OBJECT_SMOOTH:
-            temp_data = file.read(SZ_U_INT * num_faces)
+            temp_data = file.read(struct.calcsize('I') * num_faces)
             smoothgroup = struct.unpack('<%dI' % (num_faces), temp_data)
-            new_chunk.bytes_read += SZ_U_INT * num_faces
+            new_chunk.bytes_read += struct.calcsize('I') * num_faces
             contextMesh_smooth = smoothgroup
 
         elif new_chunk.ID == OBJECT_UV:
