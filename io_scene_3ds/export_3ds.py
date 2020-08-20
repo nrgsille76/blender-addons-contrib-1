@@ -926,9 +926,13 @@ def make_faces_chunk(tri_list, mesh, materialDict):
             face_chunk.add_subchunk(obj_material_chunk)
 
     obj_smooth_chunk = _3ds_chunk(OBJECT_SMOOTH)
+   
     for i, tri in enumerate(tri_list):
-        obj_smooth_chunk.add_variable("face_" + str(i),_3ds_uint(tri.group))
-        face_chunk.add_subchunk(obj_smooth_chunk)
+
+        if tri.group != 0:
+            obj_smooth_chunk.add_variable(("face_%d" % i), _3ds_uint(tri.group))
+
+    face_chunk.add_subchunk(obj_smooth_chunk)
 
     return face_chunk
 
