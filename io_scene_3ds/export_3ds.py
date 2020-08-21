@@ -859,8 +859,11 @@ def remove_face_uv(verts, tri_list):
 
 def make_faces_chunk(tri_list, mesh, materialDict):
     """Make a chunk for the faces.
-
     Also adds subchunks assigning materials to all faces."""
+    do_smooth = False
+    use_smooth = [poly.use_smooth for poly in mesh.polygons]
+    if True in use_smooth:
+        do_smooth = True
 
     materials = mesh.materials
     if not materials:
@@ -925,14 +928,11 @@ def make_faces_chunk(tri_list, mesh, materialDict):
             obj_material_chunk.add_variable("face_list", obj_material_faces[i])
             face_chunk.add_subchunk(obj_material_chunk)
 
-    obj_smooth_chunk = _3ds_chunk(OBJECT_SMOOTH)
-   
-    for i, tri in enumerate(tri_list):
-
-        if tri.group != 0:
+    if do_smooth:
+        obj_smooth_chunk = _3ds_chunk(OBJECT_SMOOTH)
+        for i, tri in enumerate(tri_list):
             obj_smooth_chunk.add_variable(("face_%d" % i), _3ds_uint(tri.group))
-
-    face_chunk.add_subchunk(obj_smooth_chunk)
+        face_chunk.add_subchunk(obj_smooth_chunk)
 
     return face_chunk
 
