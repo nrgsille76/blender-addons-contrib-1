@@ -140,24 +140,24 @@ KFDATA_SPOTLIGHT = 0xB007
 KFDATA_KFSEG = 0xB008
 # KFDATA_CURTIME = 0xB009
 # KFDATA_KFHDR = 0xB00A
-#>------ sub defines of ED_KEY_OBJECT_NODE
-EK_OB_NODE_HEADER = 0xB010
-EK_OB_INSTANCE_NAME = 0xB011
-# EK_OB_PRESCALE = 0xB012
-EK_OB_PIVOT = 0xB013
-# EK_OB_BOUNDBOX =   0xB014
-# EK_OB_MORPH_SMOOTH = 0xB015
-EK_OB_POSITION_TRACK = 0xB020
-EK_OB_ROTATION_TRACK = 0xB021
-EK_OB_SCALE_TRACK = 0xB022
-# EK_OB_CAMERA_FOV_TRACK = 0xB023
-# EK_OB_CAMERA_ROLL_TRACK = 0xB024
-EK_OB_COLOR_TRACK = 0xB025
-# EK_OB_MORPH_TRACK = 0xB026
-# EK_OB_HOTSPOT_TRACK = 0xB027
-# EK_OB_FALLOF_TRACK = 0xB028
-# EK_OB_HIDE_TRACK = 0xB029
-# EK_OB_NODE_ID = 0xB030
+#>------ sub defines of KEYFRAME_NODE
+OBJECT_NODE_HDR = 0xB010
+OBJECT_INSTANCE_NAME = 0xB011
+# OBJECT_PRESCALE = 0xB012
+OBJECT_PIVOT = 0xB013
+# OBJECT_BOUNDBOX =   0xB014
+# MORPH_SMOOTH = 0xB015
+POS_TRACK_TAG = 0xB020
+ROT_TRACK_TAG = 0xB021
+SCL_TRACK_TAG = 0xB022
+FOV_TRACK_TAG = 0xB023
+ROLL_TRACK_TAG = 0xB024
+COL_TRACK_TAG = 0xB025
+# MORPH_TRACK_TAG = 0xB026
+# HOTSPOT_TRACK_TAG = 0xB027
+# FALLOFF_TRACK_TAG = 0xB028
+# HIDE_TRACK_TAG = 0xB029
+# OBJECT_NODE_ID = 0xB030
 
 ROOT_OBJECT = 0xFFFF
 
@@ -837,7 +837,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif new_chunk.ID in {KFDATA_AMBIENT, KFDATA_CAMERA, KFDATA_OBJECT, KFDATA_TARGET, KFDATA_LIGHT,}:  # another object is being processed
             child = None
 
-        elif new_chunk.ID in {EK_OB_NODE_HEADER, KFDATA_LIGHT}:
+        elif new_chunk.ID in {OBJECT_NODE_HDR, KFDATA_CAMERA, KFDATA_LIGHT}:
             object_name, read_str_len = read_string(file)
             new_chunk.bytes_read += read_str_len
             temp_data = file.read(SZ_U_SHORT * 2)
@@ -856,7 +856,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             object_parent.append(hierarchy)
             pivot_list.append(mathutils.Vector((0.0, 0.0, 0.0)))
 
-        elif new_chunk.ID == EK_OB_INSTANCE_NAME:
+        elif new_chunk.ID == OBJECT_INSTANCE_NAME:
             object_name, read_str_len = read_string(file)
             if child.name == '$$$DUMMY':
                 child.name = object_name
@@ -864,13 +864,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             object_dictionary[object_name] = child
             new_chunk.bytes_read += read_str_len
 
-        elif new_chunk.ID == EK_OB_PIVOT:  # pivot
+        elif new_chunk.ID == OBJECT_PIVOT:  # pivot
             temp_data = file.read(SZ_3FLOAT)
             pivot = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
             pivot_list[len(pivot_list) - 1] = mathutils.Vector(pivot)
 
-        elif KEYFRAME and new_chunk.ID == EK_OB_POSITION_TRACK:  # translation
+        elif KEYFRAME and new_chunk.ID == POS_TRACK_TAG:  # translation
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -889,7 +889,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 if nframe == 0:
                     child.location = loc
 
-        elif KEYFRAME and new_chunk.ID == EK_OB_ROTATION_TRACK and child.type == 'MESH':  # rotation
+        elif KEYFRAME and new_chunk.ID == ROT_TRACK_TAG and child.type == 'MESH':  # rotation
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -908,7 +908,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 if nframe == 0:
                     child.rotation_euler = mathutils.Quaternion((axis_x, axis_y, axis_z), -rad).to_euler()   # why negative?
 
-        elif KEYFRAME and new_chunk.ID == EK_OB_SCALE_TRACK and child.type == 'MESH':  # scale
+        elif KEYFRAME and new_chunk.ID == SCL_TRACK_TAG and child.type == 'MESH':  # scale
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -927,7 +927,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 if nframe == 0:
                     child.scale = sca
 
-        elif KEYFRAME and new_chunk.ID == EK_OB_COLOR_TRACK and child.type == 'LIGHT':  # color
+        elif KEYFRAME and new_chunk.ID == COL_TRACK_TAG and child.type == 'LIGHT':  # color
             new_chunk.bytes_read += SZ_U_SHORT * 5
             temp_data = file.read(SZ_U_SHORT * 5)
             temp_data = file.read(SZ_U_SHORT)
@@ -945,6 +945,44 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
                 new_chunk.bytes_read += SZ_3FLOAT
                 if nframe == 0:
                     child.data.color = rgb
+
+        elif new_chunk.ID == FOV_TRACK_TAG and child.type == 'CAMERA':  # Field of view
+            new_chunk.bytes_read += SZ_U_SHORT * 5
+            temp_data = file.read(SZ_U_SHORT * 5)
+            temp_data = file.read(SZ_U_SHORT)
+            nkeys = struct.unpack('<H', temp_data)[0]
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 2
+            for i in range(nkeys):
+                temp_data = file.read(SZ_U_SHORT)
+                nframe = struct.unpack('<H', temp_data)[0]
+                new_chunk.bytes_read += SZ_U_SHORT
+                temp_data = file.read(SZ_U_SHORT * 2)
+                new_chunk.bytes_read += SZ_U_SHORT * 2
+                temp_data = file.read(SZ_FLOAT)
+                fov = struct.unpack('<f', temp_data)[0]
+                new_chunk.bytes_read += SZ_FLOAT
+                if nframe == 0:
+                    child.data.angle = math.radians(fov)
+                    
+        elif new_chunk.ID == ROLL_TRACK_TAG and child.type == 'CAMERA':  # Roll angle
+            new_chunk.bytes_read += SZ_U_SHORT * 5
+            temp_data = file.read(SZ_U_SHORT * 5)
+            temp_data = file.read(SZ_U_SHORT)
+            nkeys = struct.unpack('<H', temp_data)[0]
+            temp_data = file.read(SZ_U_SHORT)
+            new_chunk.bytes_read += SZ_U_SHORT * 2
+            for i in range(nkeys):
+                temp_data = file.read(SZ_U_SHORT)
+                nframe = struct.unpack('<H', temp_data)[0]
+                new_chunk.bytes_read += SZ_U_SHORT
+                temp_data = file.read(SZ_U_SHORT * 2)
+                new_chunk.bytes_read += SZ_U_SHORT * 2
+                temp_data = file.read(SZ_FLOAT)
+                roll = struct.unpack('<f', temp_data)[0]
+                new_chunk.bytes_read += SZ_FLOAT
+                if nframe == 0:
+                    child.rotation_euler[1] = math.radians(roll)
 
         else:
             buffer_size = new_chunk.length - new_chunk.bytes_read
