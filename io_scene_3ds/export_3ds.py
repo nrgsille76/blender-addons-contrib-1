@@ -1366,8 +1366,10 @@ def save(operator,
         camera_chunk = _3ds_chunk(OBJECT_CAMERA)
         diagonal = ob.location[1]/math.cos(ob.rotation_euler[2]) # triangulating target
         focus_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
-        focus_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
-        focus_z = ob.location[2]+(diagonal/math.tan(ob.rotation_euler[0]))
+        try:                      focus_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
+        except ZeroDivisionError: focus_y = ob.location[1]+ob.location[0]
+        try:                      focus_z = ob.location[2]+(diagonal/math.tan(ob.rotation_euler[0]))
+        except ZeroDivisionError: focus_z = ob.location[2]+diagonal
         object_chunk.add_variable("camera", _3ds_string(sane_name(ob.name)))
         camera_chunk.add_variable("location", _3ds_point_3d(ob.location))
         camera_chunk.add_variable("target", _3ds_point_3d((focus_x, focus_y, focus_z)))
