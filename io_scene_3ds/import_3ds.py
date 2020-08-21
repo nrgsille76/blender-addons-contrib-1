@@ -690,9 +690,9 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif contextObName and new_chunk.ID == OBJECT_LIGHT:  # Basic lamp support.
             # no lamp in dict that would be confusing
             # ...why not? just set CreateBlenderObject to False
-            newLamp = bpy.data.lights.new(contextObName, 'POINT')
-            contextLamp = bpy.data.objects.new("Lamp", newLamp)
-            context.view_layer.active_layer_collection.collection.objects.link(newLamp)
+            newLamp = bpy.data.lights.new("Lamp", 'POINT')
+            contextLamp = bpy.data.objects.new(contextObName, newLamp)
+            context.view_layer.active_layer_collection.collection.objects.link(contextLamp)
             importedObjects.append(contextLamp)
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.location = struct.unpack('<3f', temp_data)
@@ -734,8 +734,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += SZ_FLOAT
             
         elif contextObName and new_chunk.ID == OBJECT_CAMERA and CreateCameraObject is False:  # Basic camera support
-            camera = bpy.data.cameras.new(contextObName)
-            contextCamera = bpy.data.objects.new("Cam", camera)
+            camera = bpy.data.cameras.new("Camera")
+            contextCamera = bpy.data.objects.new(contextObName, camera)
             context.view_layer.active_layer_collection.collection.objects.link(contextCamera)
             imported_objects.append(contextCamera)
             temp_data = file.read(SZ_3FLOAT)
