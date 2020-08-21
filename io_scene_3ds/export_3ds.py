@@ -61,6 +61,8 @@ MATSHINESS = 0xA040  # Specular intensity of the object/material (percent)
 MATSHIN2 = 0xA041  # Reflection of the object/material (percent)
 MATSHIN3 = 0xA042  # metallic/mirror of the object/material (percent)
 MATTRANS = 0xA050  # Transparency value (100-OpacityValue) (percent)
+MATSELFILPCT = 0xA084  # Self illumination strength (percent)
+MATSHADING = 0xA100  # Material shading method
 
 MAT_DIFFUSEMAP = 0xA200  # This is a header for a new diffuse texture
 MAT_SPECMAP = 0xA204  # head for specularity map
@@ -628,9 +630,12 @@ def make_material_texture_chunk(chunk_id, texslots, pct):
     return mat_sub if has_entry else None
 
 def make_material_chunk(material, image):
-    """Make a material chunk out of a blender material."""
+    """Make a material chunk out of a blender material.
+    Shading method is required for 3ds max, 0 for wireframe.
+    0x1 for flat, 0x2 for gouraud, 0x3 for phong and 0x4 for metal."""
     material_chunk = _3ds_chunk(MATERIAL)
     name = _3ds_chunk(MATNAME)
+    shading = _3ds_chunk(MATSHADING)
 
     name_str = material.name if material else "None"
 
@@ -641,14 +646,17 @@ def make_material_chunk(material, image):
     material_chunk.add_subchunk(name)
 
     if not material:
+        shading.add_variable("shading", _3ds_ushort(1))  # Flat shading
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, (0.0, 0.0, 0.0)))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, (0.8, 0.8, 0.8)))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, (1.0, 1.0, 1.0)))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, .2))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, 1))
+        material_chunk.add_subchunk(shading)
         
     elif material and material.use_nodes:
         wrap = node_shader_utils.PrincipledBSDFWrapper(material)
+        shading.add_variable("shading", _3ds_ushort(3))  # Phong shading
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
@@ -656,6 +664,7 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.specular))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
+        material_chunk.add_subchunk(shading)
         
         if wrap.base_color_texture:
             d_pct = 0.7+sum(wrap.base_color[:])*.1
@@ -725,6 +734,7 @@ def make_material_chunk(material, image):
                 material_chunk.add_subchunk(matmap)
 
     else:
+        shading.add_variable("shading", _3ds_ushort(2))  # Gouraud shading
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, material.line_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, material.diffuse_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
@@ -732,6 +742,7 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, material.specular_intensity))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, material.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-material.diffuse_color[3]))
+        material_chunk.add_subchunk(shading)
 
         slots = [get_material_image(material)]  # can be None
 
