@@ -713,12 +713,10 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
         elif CreateLightObject and new_chunk.ID == OBJECT_LIGHT_SPOT:  # spotlight
             temp_data = file.read(SZ_3FLOAT)
             contextLamp.data.type = 'SPOT'
-            lamp = contextLamp.location
-            spot = struct.unpack('<3f', temp_data)
-            spot_aim = tuple(map(sum, zip(lamp, spot)))  # target triangulation
-            diagonal = math.copysign(math.sqrt(pow(spot_aim[0],2)+pow(spot_aim[1],2)), spot_aim[1])
-            contextLamp.rotation_euler[0] = -1*math.atan(diagonal/spot_aim[2])
-            contextLamp.rotation_euler[2] = -1*math.atan(spot_aim[0]/spot_aim[1])
+            spot = contextLamp.location + mathutils.Vector(struct.unpack('<3f', temp_data))
+            hypo = math.copysign(math.sqrt(pow(spot[0],2)+pow(spot[1],2)), spot[1])
+            contextLamp.rotation_euler[0] = -1*math.copysign(math.radians(90),spot[1])+math.atan(spot[2]/hypo)
+            contextLamp.rotation_euler[2] = -1*math.atan(spot[0]/spot[1])
             new_chunk.bytes_read += SZ_3FLOAT
             temp_data = file.read(SZ_FLOAT)  # hotspot
             hotspot = float(struct.unpack('f', temp_data)[0])
@@ -742,15 +740,13 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             contextCamera.location = struct.unpack('<3f', temp_data)
             new_chunk.bytes_read += SZ_3FLOAT
             temp_data = file.read(SZ_3FLOAT)
-            cam = contextCamera.location
-            target = struct.unpack('<3f', temp_data)
-            direct = tuple(map(sum, zip(cam, target)))
+            cam = contextCamera.location + mathutils.Vector(struct.unpack('<3f', temp_data))
             new_chunk.bytes_read += SZ_3FLOAT
             temp_data = file.read(SZ_FLOAT)   # triangulating camera angles
-            dia = math.copysign(math.sqrt(pow(direct[0],2)+pow(direct[1],2)), direct[1])
-            contextCamera.rotation_euler[0] = -1*math.atan(dia / direct[2])
+            dia = math.copysign(math.sqrt(pow(cam[0],2)+pow(cam[1],2)), cam[1])
+            contextCamera.rotation_euler[0] = -1*math.copysign(math.radians(90),cam[1])+math.atan(cam[2]/dia)
             contextCamera.rotation_euler[1] = float(struct.unpack('f', temp_data)[0])
-            contextCamera.rotation_euler[2] = -1*math.atan(direct[0] / direct[1])
+            contextCamera.rotation_euler[2] = -1*math.atan(cam[0]/cam[1])
             new_chunk.bytes_read += SZ_FLOAT
             temp_data = file.read(SZ_FLOAT)
             contextCamera.data.lens = (float(struct.unpack('f', temp_data)[0]) * 10)
