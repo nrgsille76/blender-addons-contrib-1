@@ -830,10 +830,10 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             context.scene.frame_end = stop
 
         # including these here means their EK_OB_NODE_HEADER are scanned
-        elif new_chunk.ID in {KFDATA_AMBIENT, KFDATA_CAMERA, KFDATA_OBJECT, KFDATA_TARGET, KFDATA_LIGHT,}:  # another object is being processed
+        elif new_chunk.ID in {KFDATA_AMBIENT, KFDATA_CAMERA, KFDATA_OBJECT, KFDATA_TARGET, KFDATA_LIGHT, KFDATA_L_TARGET,}:  # another object is being processed
             child = None
 
-        elif new_chunk.ID in {OBJECT_NODE_HDR, KFDATA_CAMERA, KFDATA_LIGHT}:
+        elif new_chunk.ID == OBJECT_NODE_HDR:
             object_name, read_str_len = read_string(file)
             new_chunk.bytes_read += read_str_len
             temp_data = file.read(SZ_U_SHORT * 2)
@@ -843,7 +843,7 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             new_chunk.bytes_read += 2
             child = object_dictionary.get(object_name)
 
-            if child is None:
+            if child is None and object_name != '$AMBIENT$':
                 child = bpy.data.objects.new(object_name, None)  # create an empty object
                 context.view_layer.active_layer_collection.collection.objects.link(child)
                 importedObjects.append(child)
