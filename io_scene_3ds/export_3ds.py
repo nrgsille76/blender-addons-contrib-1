@@ -1327,6 +1327,14 @@ def save(operator,
 
         i += i
 
+    # Create chunks for all empties:
+    ''' # COMMENTED OUT FOR 2.42 RELEASE!! CRASHES 3DS MAX
+    for ob in empty_objects:
+        # Empties only require a kf object node:
+        kfdata.add_subchunk(make_kf_obj_node(ob, name_to_id))
+        pass
+    '''
+
     # Create light object chunks
     for ob in light_objects:
         object_chunk = _3ds_chunk(OBJECT)
@@ -1343,10 +1351,10 @@ def save(operator,
         if ob.data.type == 'SPOT':
             cone_angle = math.degrees(ob.data.spot_size)
             hotspot = cone_angle-(ob.data.spot_blend*math.floor(cone_angle))
-            diagonal = ob.location[1]/math.cos(ob.rotation_euler[2]) # triangulating target
+            hypo = math.copysign(math.sqrt(pow(ob.location[0],2)+pow(ob.location[1],2)), ob.location[1])
             pos_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
-            pos_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
-            pos_z = ob.location[2]+(diagonal/math.tan(ob.rotation_euler[0]))
+            pos_y = ob.location[1]+(ob.location[0]*math.tan(math.radians(90)-ob.rotation_euler[2]))
+            pos_z = ob.location[2]+(hypo*math.tan(math.radians(90)-ob.rotation_euler[0]))
             spotlight_chunk = _3ds_chunk(LIGHT_SPOTLIGHT)
             spot_roll_chunk = _3ds_chunk(LIGHT_SPOTROLL)
             spotlight_chunk.add_variable("target", _3ds_point_3d((pos_x, pos_y, pos_z)))
@@ -1364,10 +1372,10 @@ def save(operator,
     for ob in camera_objects:
         object_chunk = _3ds_chunk(OBJECT)
         camera_chunk = _3ds_chunk(OBJECT_CAMERA)
-        diagonal = ob.location[1]/math.cos(ob.rotation_euler[2]) # triangulating target
+        diagonal = math.copysign(math.sqrt(pow(ob.location[0],2)+pow(ob.location[1],2)), ob.location[1])
         focus_x = ob.location[0]+(ob.location[1]*math.tan(ob.rotation_euler[2]))
-        focus_y = ob.location[1]+(ob.location[0]/math.tan(ob.rotation_euler[2]))
-        focus_z = ob.location[2]+(diagonal/math.tan(ob.rotation_euler[0]))
+        focus_y = ob.location[1]+(ob.location[0]*math.tan(math.radians(90)-ob.rotation_euler[2]))
+        focus_z = ob.location[2]+(diagonal*math.tan(math.radians(90)-ob.rotation_euler[0]))
         object_chunk.add_variable("camera", _3ds_string(sane_name(ob.name)))
         camera_chunk.add_variable("location", _3ds_point_3d(ob.location))
         camera_chunk.add_variable("target", _3ds_point_3d((focus_x, focus_y, focus_z)))
@@ -1375,14 +1383,6 @@ def save(operator,
         camera_chunk.add_variable("lens", _3ds_float(ob.data.lens))
         object_chunk.add_subchunk(camera_chunk)
         object_info.add_subchunk(object_chunk)
-
-    # Create chunks for all empties:
-    ''' # COMMENTED OUT FOR 2.42 RELEASE!! CRASHES 3DS MAX
-    for ob in empty_objects:
-        # Empties only require a kf object node:
-        kfdata.add_subchunk(make_kf_obj_node(ob, name_to_id))
-        pass
-    '''
 
     # Add main object info chunk to primary chunk:
     primary.add_subchunk(object_info)
