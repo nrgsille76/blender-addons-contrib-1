@@ -716,8 +716,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             spot = mathutils.Vector(struct.unpack('<3f', temp_data))
             aim = contextLamp.location + spot
             hypo = math.copysign(math.sqrt(pow(aim[1],2)+pow(aim[0],2)),aim[1])
-            track = -1*(math.sqrt(pow(hypo,2)+pow(spot[2],2)))
-            angle = math.copysign(math.acos(hypo/track), aim[2])
+            track = math.copysign(math.sqrt(pow(hypo,2)+pow(spot[2],2)),aim[1])
+            angle = math.radians(90)-math.copysign(math.acos(hypo/track),aim[2])
             contextLamp.rotation_euler[0] = -1*math.copysign(angle, aim[1])
             contextLamp.rotation_euler[2] = -1*(math.radians(90)-math.acos(aim[0]/hypo))
             new_chunk.bytes_read += SZ_3FLOAT
@@ -748,8 +748,8 @@ def process_next_chunk(context, file, previous_chunk, importedObjects, IMAGE_SEA
             focus = math.copysign(math.sqrt(pow(cam[1],2)+pow(cam[0],2)),cam[1])
             new_chunk.bytes_read += SZ_3FLOAT
             temp_data = file.read(SZ_FLOAT)   # triangulating camera angles
-            direction = -1*(math.sqrt(pow(focus,2)+pow(target[2],2)))
-            pitch = math.copysign(math.acos(focus/direction), cam[2])
+            direction = math.copysign(math.sqrt(pow(focus,2)+pow(target[2],2)),cam[1])
+            pitch = math.radians(90)-math.copysign(math.acos(focus/direction),cam[2])
             contextCamera.rotation_euler[0] = -1*math.copysign(pitch, cam[1])
             contextCamera.rotation_euler[1] = float(struct.unpack('f', temp_data)[0])
             contextCamera.rotation_euler[2] = -1*(math.radians(90)-math.acos(cam[0]/focus))
