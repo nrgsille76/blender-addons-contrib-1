@@ -660,14 +660,14 @@ def make_material_chunk(material, image):
         material_chunk.add_subchunk(make_material_subchunk(MATAMBIENT, wrap.emission_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATDIFFUSE, wrap.base_color[:3]))
         material_chunk.add_subchunk(make_material_subchunk(MATSPECULAR, material.specular_color[:]))
-        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, wrap.roughness))
+        material_chunk.add_subchunk(make_percent_subchunk(MATSHINESS, 1-wrap.roughness))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN2, wrap.specular))
         material_chunk.add_subchunk(make_percent_subchunk(MATSHIN3, wrap.metallic))
         material_chunk.add_subchunk(make_percent_subchunk(MATTRANS, 1-wrap.alpha))
         material_chunk.add_subchunk(shading)
         
         if wrap.base_color_texture:
-            d_pct = 0.7+sum(wrap.base_color[:])*.1
+            d_pct = 0.7+sum(wrap.base_color[:])*0.1
             color = [wrap.base_color_texture]
             matmap = make_material_texture_chunk(MAT_DIFFUSEMAP, color, d_pct)
             if matmap:
@@ -708,7 +708,7 @@ def make_material_chunk(material, image):
 
         if wrap.roughness_texture:
             roughness = [wrap.roughness_texture]
-            r_pct = material.roughness
+            r_pct = 1-material.roughness
             matmap = make_material_texture_chunk(MAT_SHINMAP, roughness, r_pct)
             if matmap:
                 material_chunk.add_subchunk(matmap)
